@@ -104,6 +104,22 @@
     background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between}
   #plist .prow:hover{background:rgba(255,214,107,.16);border-color:#ffd66b}
   #plist .prow em{font-style:normal;opacity:.6;font-size:12px}
+  #xferBtns{display:flex;gap:8px;margin-top:12px}
+  #xferBtns button{flex:1;padding:7px;font-size:12px;font-family:inherit;letter-spacing:1px;color:#9be7ff;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:4px;cursor:pointer}
+  #xferBtns button:hover{border-color:#9be7ff;background:rgba(155,231,255,.12)}
+  #xfer{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;z-index:34;
+    padding:18px 22px;width:min(560px,92vw);pointer-events:auto}
+  #xfer h3{color:#ffd66b;letter-spacing:2px;font-size:14px;margin-bottom:6px}
+  #xfer p{font-size:12px;opacity:.75;line-height:1.6;margin-bottom:10px}
+  #xfer textarea{width:100%;height:120px;padding:9px;font-family:monospace;font-size:11px;color:#fff;
+    background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.2);border-radius:4px;outline:none;resize:vertical}
+  #xfer textarea:focus{border-color:#ffd66b}
+  #xfer .row{display:flex;gap:8px;margin-top:10px}
+  #xfer .row button{flex:1;padding:9px;font-size:13px;font-family:inherit;letter-spacing:2px;font-weight:bold;
+    color:#0b0d14;background:#ffd66b;border:none;border-radius:4px;cursor:pointer}
+  #xfer .row button.sec{color:#9be7ff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+  #xferMsg{margin-top:8px;font-size:12px;min-height:16px;color:#5fe08a}
   #account input+input{margin-top:8px}
   #account .hint{font-size:11px;opacity:.5;margin-top:8px;letter-spacing:1px;line-height:1.5}
   #codepanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;z-index:32;
@@ -147,6 +163,16 @@
 
 <div id="bigmap"><canvas id="bigmapC" width="512" height="512"></canvas><div class="foot">[M] schliessen</div></div>
 <div id="travel" class="panel"><h3>HYPERRAUM-SPRUNG</h3><div id="travelList"></div><div class="foot">Zifferntaste wählen · [T] schliessen</div></div>
+<div id="xfer" class="panel">
+  <h3 id="xferTitle">KONTEN ÜBERTRAGEN</h3>
+  <p id="xferHelp"></p>
+  <textarea id="xferBox" spellcheck="false" autocomplete="off"></textarea>
+  <div class="row">
+    <button id="xferGo" type="button">ÜBERNEHMEN</button>
+    <button id="xferClose" class="sec" type="button">SCHLIESSEN</button>
+  </div>
+  <div id="xferMsg"></div>
+</div>
 <div id="shop" class="panel">
   <h3>SCHWARZMARKT</h3>
   <div class="bal">Guthaben: <span id="shopBal">0</span> Münzen · Sturmtruppler 5 · TIE-Jäger 10</div>
@@ -168,6 +194,10 @@
     <input id="pcode" maxlength="24" type="password" placeholder="Sicherungscode (optional)" autocomplete="off" spellcheck="false">
     <button id="pgo">SPIEL STARTEN</button>
     <div id="perr"></div>
+    <div id="xferBtns">
+      <button id="pexport" type="button">Konten exportieren</button>
+      <button id="pimport" type="button">Konten importieren</button>
+    </div>
     <div class="hint">Mit Sicherungscode kann niemand anderes dein Konto öffnen.<br>Im Spiel mit [K] ändern. Leer lassen = ohne Code.</div>
     <div id="plist"></div>
   </div>
@@ -1318,6 +1348,53 @@ function applyProfile(pr){
   }
   refreshQuests();
 }
+function b64enc(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64dec(str){ return decodeURIComponent(escape(atob(str))); }
+function openXfer(mode){
+  const box=document.getElementById('xferBox'), msg=document.getElementById('xferMsg');
+  document.getElementById('xfer').style.display='block';
+  msg.textContent='';
+  document.getElementById('xferGo').style.display = mode==='import' ? 'block' : 'none';
+  if(mode==='export'){
+    document.getElementById('xferTitle').textContent='KONTEN EXPORTIEREN';
+    document.getElementById('xferHelp').textContent=
+      'Diesen Code kopieren und auf dem anderen Gerät oder der anderen Adresse unter "Konten importieren" einfügen. Er enthält alle Konten mit Fortschritt.';
+    const raw=localStorage.getItem(ACC_KEY)||'{}';
+    box.value=b64enc(raw);
+    box.select();
+    try{ navigator.clipboard.writeText(box.value).then(function(){ msg.textContent='In die Zwischenablage kopiert.'; },function(){}); }catch(e){}
+  } else {
+    document.getElementById('xferTitle').textContent='KONTEN IMPORTIEREN';
+    document.getElementById('xferHelp').textContent=
+      'Code aus dem Export hier einfügen und auf ÜBERNEHMEN drücken. Vorhandene Konten bleiben erhalten, gleichnamige werden nur ersetzt, wenn der Import neuer ist.';
+    box.value=''; box.focus();
+  }
+}
+function closeXfer(){ document.getElementById('xfer').style.display='none'; }
+function xferOpen(){ const e=document.getElementById('xfer'); return e&&e.style.display==='block'; }
+function doImport(){
+  const box=document.getElementById('xferBox'), msg=document.getElementById('xferMsg');
+  const txt=(box.value||'').trim();
+  if(!txt){ msg.style.color='#ff8a4c'; msg.textContent='Bitte den Code einfügen.'; return; }
+  let obj=null;
+  try{ obj=JSON.parse(b64dec(txt)); }catch(e){
+    try{ obj=JSON.parse(txt); }catch(e2){ obj=null; }
+  }
+  if(!obj||typeof obj!=='object'||Array.isArray(obj)){
+    msg.style.color='#ff8a4c'; msg.textContent='Der Code ist unvollständig oder beschädigt.'; return;
+  }
+  const all=loadAccounts(); let neu=0, akt=0, gleich=0;
+  for(const k in obj){
+    const inc=obj[k];
+    if(!inc||typeof inc!=='object') continue;
+    if(!all[k]){ all[k]=inc; neu++; }
+    else if((inc.last||0)>(all[k].last||0)){ all[k]=inc; akt++; }
+    else gleich++;
+  }
+  storeAccounts(all); drawAccountList();
+  msg.style.color='#5fe08a';
+  msg.textContent=neu+' Konten übernommen, '+akt+' aktualisiert'+(gleich?(', '+gleich+' waren schon aktuell'):'')+'.';
+}
 function drawAccountList(){
   const all=loadAccounts(), names=Object.keys(all).sort(function(a,b){ return (all[b].last||0)-(all[a].last||0); });
   const el=document.getElementById('plist');
@@ -1496,6 +1573,7 @@ function saveCodePanel(){
 const keys={};
 function menuOpen(){ const st=document.getElementById('start'); return st&&st.style.display!=='none'; }
 addEventListener('keydown',e=>{
+  if(xferOpen()){ if(e.code==='Escape') closeXfer(); return; }
   if(menuOpen()){ if(e.code==='Enter'||e.code==='NumpadEnter'||e.key==='Enter') startGame(); return; }
   if(codeOpen()){
     if(e.key==='Enter') saveCodePanel();
@@ -2530,6 +2608,10 @@ function init(){
   $('#pgo').addEventListener('click',function(){ startGame(); });
   $('#pname').addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); startGame(); } });
   $('#pcode').addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); startGame(); } });
+  $('#pexport').addEventListener('click',function(){ openXfer('export'); });
+  $('#pimport').addEventListener('click',function(){ openXfer('import'); });
+  $('#xferGo').addEventListener('click',doImport);
+  $('#xferClose').addEventListener('click',closeXfer);
   $('#ccode').addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); saveCodePanel(); } });
   setTimeout(function(){ const el=$('#pname'); if(el) el.focus(); },60);
   requestAnimationFrame(loop);
