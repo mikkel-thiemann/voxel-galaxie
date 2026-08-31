@@ -1249,6 +1249,19 @@ function updateSpawns(dt){
 
 // ---------- Konto / Spielstand ----------------------------------------
 const ACC_KEY='voxelwars_accounts';
+// In die Datei eingebackene Konten (Base64). Werden beim ersten Start auf einer
+// neuen Adresse/einem neuen Gerät automatisch angelegt. Vorhandene Konten mit
+// gleichem Namen bleiben unangetastet — lokaler Fortschritt gewinnt immer.
+const SEED_ACCOUNTS='';
+function seedAccounts(){
+  if(!SEED_ACCOUNTS) return;
+  let obj=null;
+  try{ obj=JSON.parse(b64dec(SEED_ACCOUNTS)); }catch(e){ return; }
+  if(!obj||typeof obj!=='object') return;
+  const all=loadAccounts(); let n=0;
+  for(const k in obj){ if(!all[k]&&obj[k]&&typeof obj[k]==='object'){ all[k]=obj[k]; n++; } }
+  if(n) storeAccounts(all);
+}
 let account=null;
 function mixHash(str,seed){
   let a=(seed>>>0)||2166136261;
@@ -2604,6 +2617,7 @@ function init(){
 
   $('#loading').style.display='none';
   $('#start').style.display='flex';
+  seedAccounts();
   drawAccountList();
   $('#pgo').addEventListener('click',function(){ startGame(); });
   $('#pname').addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); startGame(); } });
