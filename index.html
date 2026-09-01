@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 6 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 7 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -876,7 +876,17 @@ function makeChar(cfg){
     const h=new THREE.Mesh(new THREE.BoxGeometry(1,.9,1),mat(cfg.hood)); h.position.y=1.95; g.add(h);
     const f=new THREE.Mesh(new THREE.BoxGeometry(.6,.4,.06),mat(0x101216)); f.position.set(0,1.85,.51); g.add(f);
   }
+  if(cfg.ears){
+    for(const sd of[-1,1]){
+      const L=cfg.earLen||0.8;
+      const e=new THREE.Mesh(new THREE.BoxGeometry(L,.26,.18),mat(cfg.ears));
+      e.position.set(sd*(0.42+L/2),1.92,0); e.rotation.z=sd*(cfg.earTilt||0.3); g.add(e);
+    }
+  }
   const body=new THREE.Mesh(new THREE.BoxGeometry(.8,1,.45),mat(cfg.body)); body.position.y=1; g.add(body);
+  if(cfg.belt){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.86,.16,.5),mat(cfg.belt)); b.position.y=.62; g.add(b);
+  }
   const armL=new THREE.Mesh(new THREE.BoxGeometry(.28,.95,.28),mat(cfg.arms||cfg.body));
   armL.geometry.translate(0,-.42,0); armL.position.set(-.56,1.45,0); g.add(armL);
   const armR=armL.clone(); armR.position.x=.56; g.add(armR);
@@ -1019,6 +1029,35 @@ function makeSpeeder(){
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
   g.userData.flames=flames;
   return g;
+}
+
+// ---------- Spielerfiguren (Skins) ----------
+const SKINS={
+  held:   {name:'Jedi-Wanderer', scale:1,
+           cfg:{skin:0xd9a066,body:0xb9a17c,arms:0xc9b189,legs:0x6f5b3e,hood:0xa8916b,belt:0x6b5334}},
+  yoda:   {name:'Meister Yoda', scale:0.66,
+           cfg:{skin:0x9fc46a,body:0x8a7042,arms:0x9a7d4c,legs:0x6d5834,ears:0x9fc46a,earLen:1.0,earTilt:0.42,belt:0x5b4a2c}},
+  grogu:  {name:'Grogu', scale:0.46,
+           cfg:{skin:0xa8cf74,body:0xd8cba6,arms:0xcfc199,legs:0xc0b48d,ears:0xa8cf74,earLen:1.25,earTilt:0.15}},
+  trooper:{name:'Sturmtruppler', scale:1,
+           cfg:{skin:0xf2f2f2,body:0xf5f5f5,arms:0xe8e8e8,legs:0xdddddd,helmet:0xffffff,belt:0x20242c}},
+  sith:   {name:'Dunkler Lord', scale:1.06,
+           cfg:{skin:0xd8b090,body:0x1d2027,arms:0x24272f,legs:0x14161c,hood:0x101216,belt:0x2f333c}},
+  ewok:   {name:'Ewok-Krieger', scale:0.74,
+           cfg:{skin:0x8a5a34,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x5c3d21,belt:0x3f2a15}},
+  pilot:  {name:'Rebellenpilot', scale:1,
+           cfg:{skin:0xd9a066,body:0xd6753a,arms:0xc96b34,legs:0x4a4f57,helmet:0xe8e2d4,belt:0x2b2f3a}}
+};
+let skinId='held';
+function applySkin(id){
+  if(!SKINS[id]) return;
+  skinId=id;
+  const old=playerModel;
+  playerModel=makeChar(SKINS[id].cfg);
+  playerModel.scale.setScalar(SKINS[id].scale);
+  if(old){ playerModel.position.copy(old.position); playerModel.rotation.copy(old.rotation); scene.remove(old); }
+  scene.add(playerModel);
+  rebuildSaber();
 }
 
 // ======================================================================
@@ -1294,7 +1333,7 @@ function collectProfile(){
     codeHash:prev.codeHash, codeSalt:prev.codeSalt,
     name:account, created:(loadAccounts()[account]||{}).created||Date.now(), last:Date.now(),
     airKills:player.airKills, groundKills:player.groundKills, saberDamage:saberDamage,
-    coins:player.coins, owned:Object.keys(owned), levels:JSON.parse(JSON.stringify(lvl)),
+    coins:player.coins, owned:Object.keys(owned), levels:JSON.parse(JSON.stringify(lvl)), skin:skinId,
     paidAir:player.paidAir, paidGround:player.paidGround,
     quests:quests.map(function(q){ return {id:q.id,st:qState[q.id],have:q.have||0}; }),
     discovered:Array.from(discovered).map(function(L){ return L.name; }),
@@ -1322,6 +1361,7 @@ function applyProfile(pr){
     },900);
     saveProfile();
   }
+  if(pr.skin&&SKINS[pr.skin]) applySkin(pr.skin);
   const src=pr.levels||null;
   if(src){
     for(const id in src){
@@ -1335,6 +1375,7 @@ function applyProfile(pr){
       if(it&&!owned[id]){ lvl[id]=1; owned[id]=true; it.apply(1); }
     }
   }
+  if(pr.skin&&SKINS[pr.skin]&&skinId!==pr.skin) applySkin(pr.skin);   // gewählter Skin gewinnt
   if(pr.quests) for(const q of pr.quests){
     const qq=quests.find(function(x){ return x.id===q.id; });
     if(!qq) continue;
@@ -1489,6 +1530,21 @@ const SHOP=[
    apply:function(l){ saberColor=0x4dff6a; rebuildSaber(); }},
   {id:'purple',name:'Violette Kyberklinge',desc:'seltene Farbe · anklicken zum Wechseln',price:80,max:1,reusable:true,
    apply:function(l){ saberColor=0xb46cff; rebuildSaber(); }},
+  // --- Aussehen ---
+  {id:'skin_held',name:'Jedi-Wanderer (Standard)',desc:'deine Grundfigur · jederzeit wieder anlegen',price:0,max:1,reusable:true,
+   apply:function(l){ applySkin('held'); }},
+  {id:'skin_trooper',name:'Skin: Sturmtruppler',desc:'weisse Rüstung mit Helm',price:200,max:1,reusable:true,
+   apply:function(l){ applySkin('trooper'); }},
+  {id:'skin_ewok',name:'Skin: Ewok-Krieger',desc:'klein, pelzig, mit Kapuze',price:250,max:1,reusable:true,
+   apply:function(l){ applySkin('ewok'); }},
+  {id:'skin_pilot',name:'Skin: Rebellenpilot',desc:'oranger Fluganzug mit Helm',price:300,max:1,reusable:true,
+   apply:function(l){ applySkin('pilot'); }},
+  {id:'skin_sith',name:'Skin: Dunkler Lord',desc:'schwarze Robe mit Kapuze',price:450,max:1,reusable:true,
+   apply:function(l){ applySkin('sith'); }},
+  {id:'skin_yoda',name:'Skin: Meister Yoda',desc:'klein, grün, grosse Ohren',price:800,max:1,reusable:true,
+   apply:function(l){ applySkin('yoda'); }},
+  {id:'skin_grogu',name:'Skin: Grogu',desc:'winzig, in der Kutte · das Kind',price:1200,max:1,reusable:true,
+   apply:function(l){ applySkin('grogu'); }},
   // --- Körper ---
   {id:'armor',name:'Panzerweste',desc:'Leben je Stufe +50 (Stufe 5 = 350)',price:90,max:5,
    apply:function(l){ player.hpMax=100+50*l; player.hp=player.hpMax; }},
@@ -1526,7 +1582,7 @@ const SHOP=[
 let forceRegen=9, jumpV=9.6, sprintSpd=12, walkSpd=6.6, shieldRegen=8, hullMul=1,
     tkRange=24, tkPower=58, zapRange=17, zapCost=40, healAmt=35, maxJumps=1, boltCdMs=180, boltDmg=1,
     speederBoost=1, hullRegen=0, hpRegen=0, pickupRange=2.6;
-const owned={blue:true}; const lvl={blue:1};
+const owned={blue:true,skin_held:true}; const lvl={blue:1,skin_held:1};
 function shopOpen(){ const e=document.getElementById('shop'); return e&&e.style.display==='block'; }
 function itemPrice(it){ return Math.round(it.price*Math.pow(1.7,lvl[it.id]||0)); }
 function drawShop(){
