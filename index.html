@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 11 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 12 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -512,7 +512,7 @@ function crashedFreighter(cx,cz){
 }
 function iceCave(cx,cz){
   const b=gy(cx,cz)+1;
-  const R=35, H=34, IR=28, IH=25;          // Aussen-/Innenmasse der Eiskuppel
+  const R=62, H=58, IR=56, IH=50;          // Aussen-/Innenmasse der Eiskuppel (doppelt)
   const ICE=[0x9ecbe8,0x8ab6d6,0xb9dcf2,0xa4c9e2];
   const mouthDir=-Math.PI/2;               // Mündung zeigt nach -z
   const mouthW=0.72;                       // halbe Öffnungsbreite im Bogenmass
@@ -525,19 +525,19 @@ function iceCave(cx,cz){
     const inMouth=Math.abs(rel)<mouthW;
     for(let y=0;y<=outH;y++){
       if(d<IR-0.5 && y<=inH) continue;                       // Halle bleibt hohl
-      if(inMouth && y<=18-Math.round(Math.abs(rel)/mouthW*7)) continue;  // Torbogen offen
+      if(inMouth && y<=34-Math.round(Math.abs(rel)/mouthW*13)) continue;  // Torbogen offen
       const gl=(hash2(cx+x*3,cz+z*5+y)>0.958);               // Kristalladern
       putBlock(cx+x,b+y,cz+z, gl?0x8fd6ff:pick(ICE,cx+x,cz+z+y), gl);
       if(y===outH) shell.push([x,z,y]);
     }
   }
   // Eiszapfen von der Hallendecke
-  for(let i=0;i<70;i++){
+  for(let i=0;i<150;i++){
     const a=rnd()*Math.PI*2, r=rr(2,IR-3);
     const x=Math.round(Math.cos(a)*r), z=Math.round(Math.sin(a)*r);
     const d=Math.hypot(x,z);
     const inH=Math.round(IH*Math.sqrt(Math.max(0,1-(d/IR)*(d/IR))));
-    const len=ri(2,7);
+    const len=ri(3,12);
     for(let y=0;y<len;y++){
       const w=(y<len-2)?1:0;
       putBlock(cx+x,b+inH-y,cz+z, y===len-1?0xd8f0ff:pick(ICE,cx+x,cz+z), y===len-1);
@@ -545,44 +545,45 @@ function iceCave(cx,cz){
     }
   }
   // Zapfen am oberen Rand der Mündung
-  for(let a=-mouthW;a<=mouthW;a+=0.045){
+  for(let a=-mouthW;a<=mouthW;a+=0.022){
     const x=Math.round(Math.cos(mouthDir+a)*(IR-1)), z=Math.round(Math.sin(mouthDir+a)*(IR-1));
-    const top=18-Math.round(Math.abs(a)/mouthW*7);
-    for(let y=0;y<ri(1,4);y++) putBlock(cx+x,b+top-y,cz+z, y===0?0xd8f0ff:0xb9dcf2, y===0);
+    const top=34-Math.round(Math.abs(a)/mouthW*13);
+    for(let y=0;y<ri(2,7);y++) putBlock(cx+x,b+top-y,cz+z, y===0?0xd8f0ff:0xb9dcf2, y===0);
   }
   // Hallenboden aus festem Eis
   for(let x=-IR+2;x<=IR-2;x++)for(let z=-IR+2;z<=IR-2;z++)
     if(Math.hypot(x,z)<IR-2) putBlock(cx+x,b-1,cz+z, pick([0xc9dced,0xd7e6f5],cx+x,cz+z));
   // Rebellen-Hangar in der Halle
-  xwing(cx-17,cz-6,0xd6753a);
-  xwing(cx-15,cz+10,0xc8c2b4);
-  snowSpeeder(cx-8,cz-16);
-  snowSpeeder(cx+8,cz-16);
-  for(let i=0;i<16;i++){                                   // Kisten und Fässer
-    const x=cx+ri(-18,18), z=cz+ri(-14,18);
+  xwing(cx-34,cz-10,0xd6753a);
+  xwing(cx-32,cz+16,0xc8c2b4);
+  xwing(cx-38,cz+34,0xc8c2b4);
+  snowSpeeder(cx-16,cz-34);
+  snowSpeeder(cx+16,cz-34);
+  snowSpeeder(cx+30,cz+14);
+  for(let i=0;i<40;i++){                                   // Kisten und Fässer
+    const x=cx+ri(-40,40), z=cz+ri(-34,40);
     fillBox(x,b,z,ri(1,2),ri(1,2),ri(1,2), pick([0x6d7c8c,0x8b6b3f,0xa33c3c],x,z),false,0.12);
   }
-  for(let i=0;i<14;i++){                                   // Lampen
+  for(let i=0;i<30;i++){                                   // Lampen
     const a=rnd()*Math.PI*2, r=rr(6,IR-4);
     const x=cx+Math.round(Math.cos(a)*r), z=cz+Math.round(Math.sin(a)*r);
     for(let y=0;y<3;y++) putBlock(x,b+y,z,0x3b3f47);
     putBlock(x,b+3,z,0xffc766,true);
   }
-  for(let i=0;i<5;i++){                                    // Stützpfeiler
+  for(let i=0;i<9;i++){                                    // Stützpfeiler
     const a=i/5*Math.PI*2, r=IR-6;
     const x=cx+Math.round(Math.cos(a)*r), z=cz+Math.round(Math.sin(a)*r);
     const d=Math.hypot(x-cx,z-cz);
     const inH=Math.round(IH*Math.sqrt(Math.max(0,1-(d/IR)*(d/IR))));
     for(let y=0;y<inH;y++) fillBox(x,b+y,z,2,1,2, pick(ICE,x,z+y),false,0.08);
   }
-  for(let i=0;i<22;i++){                                   // Kristallnester an der Wand
+  for(let i=0;i<44;i++){                                   // Kristallnester an der Wand
     const a=rr(0,Math.PI*2), r=IR-2;
     const x=cx+Math.round(Math.cos(a)*r), z=cz+Math.round(Math.sin(a)*r), yy=b+ri(2,14);
     for(let k=0;k<ri(3,7);k++)
       putBlock(x+ri(-1,1), yy+ri(-2,2), z+ri(-1,1), 0x8fd6ff, true);
   }
-  crashedFreighter(cx+3,cz+9);                             // begehbares Wrack in der Halle
-  banner(cx-14,cz+16,7,0xd6753a);                          // Rebellenbanner
+  banner(cx-26,cz+30,9,0xd6753a);                          // Rebellenbanner
   return b;
 }
 function imperialTower(cx,cz,h,r){
@@ -766,12 +767,12 @@ const L_BASE=addLandmark({name:'Echo-Basis',x:750,z:-730,r:170,flatR:112,build()
   landingPad(c.x-58,c.z+40,13,0xc3d3e2,0x9be7ff);
 }});
 
-const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:100,flatR:44,build(){
+const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:150,flatR:76,build(){
   const c=this;
   iceCave(c.x,c.z);
   // Eisformationen und Gletscherzacken rund um den Eingang
   for(let i=0;i<16;i++){
-    const a=rnd()*Math.PI*2, r=rr(38,64);
+    const a=rnd()*Math.PI*2, r=rr(70,104);
     const x=c.x+Math.round(Math.cos(a)*r), z=c.z+Math.round(Math.sin(a)*r), b=gy(x,z)+1;
     const hgt=ri(8,22);
     for(let y=0;y<hgt;y++){
@@ -780,9 +781,9 @@ const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:100,flatR:44,build(){
     }
   }
   // Anflugschneise vor der Mündung
-  for(let i=0;i<9;i++) lampPost(c.x+ri(-16,16), c.z-38-i*5);
-  landingPad(c.x,c.z-60,13,0xc3d3e2,0x9be7ff);
-  for(let i=0;i<3;i++) snowSpeeder(c.x-20+i*20, c.z-46);
+  for(let i=0;i<12;i++) lampPost(c.x+ri(-24,24), c.z-70-i*6);
+  landingPad(c.x,c.z-104,16,0xc3d3e2,0x9be7ff);
+  for(let i=0;i<3;i++) snowSpeeder(c.x-24+i*24, c.z-88);
 }});
 
 const L_VILLAGE=addLandmark({name:'Ewok-Dorf',x:-730,z:750,r:150,flatR:0,build(){
@@ -1533,7 +1534,7 @@ function populate(){
   }
   // Eisfrachter — steht startbereit in der Eishöhle
   {
-    const fx=L_CAVE.x-6, fz=L_CAVE.z-14;
+    const fx=L_CAVE.x-4, fz=L_CAVE.z-20;
     const fr=makeFreighter(); fr.scale.setScalar(1.15); noFog(fr);
     const fy=terrainH(fx,fz)+5;
     fr.position.set(fx,fy,fz);
