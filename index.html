@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 15 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 16 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1158,11 +1158,32 @@ function makeChar(cfg){
     const h=new THREE.Mesh(new THREE.BoxGeometry(1,.9,1),mat(cfg.hood)); h.position.y=1.95; g.add(h);
     const f=new THREE.Mesh(new THREE.BoxGeometry(.6,.4,.06),mat(0x101216)); f.position.set(0,1.85,.51); g.add(f);
   }
+  const hs=cfg.headScale||1;
+  head.scale.setScalar(hs);
+  if(cfg.eyes){
+    for(const sd of[-1,1]){
+      const ey=new THREE.Mesh(new THREE.BoxGeometry(.13*hs,.16*hs,.06),mat(cfg.eyes));
+      ey.position.set(sd*.2*hs,1.9,.41*hs); g.add(ey);
+    }
+    const mo=new THREE.Mesh(new THREE.BoxGeometry(.24*hs,.05,.05),mat(cfg.eyes));
+    mo.position.set(0,1.66,.41*hs); g.add(mo);
+  }
   if(cfg.ears){
     for(const sd of[-1,1]){
       const L=cfg.earLen||0.8;
-      const e=new THREE.Mesh(new THREE.BoxGeometry(L,.26,.18),mat(cfg.ears));
-      e.position.set(sd*(0.42+L/2),1.92,0); e.rotation.z=sd*(cfg.earTilt||0.3); g.add(e);
+      const e=new THREE.Mesh(new THREE.BoxGeometry(L*0.7,.3*hs,.20),mat(cfg.ears));
+      e.position.set(sd*(0.38*hs+L*0.35),1.92,0); e.rotation.z=sd*(cfg.earTilt||0.3); g.add(e);
+      const t=new THREE.Mesh(new THREE.BoxGeometry(L*0.45,.16,.12),mat(cfg.ears));   // spitzes Ende
+      t.position.set(sd*(0.38*hs+L*0.72),1.92+Math.sin(cfg.earTilt||0.3)*L*0.5,0);
+      t.rotation.z=sd*((cfg.earTilt||0.3)+0.25); g.add(t);
+    }
+  }
+  if(cfg.robe){                                   // Kutte über den Beinen
+    const r1=new THREE.Mesh(new THREE.BoxGeometry(.96,.85,.62),mat(cfg.robe)); r1.position.y=.62; g.add(r1);
+    const r2=new THREE.Mesh(new THREE.BoxGeometry(1.05,.28,.7),mat(shade(cfg.robe,-0.06))); r2.position.y=.24; g.add(r2);
+    for(const sd of[-1,1]){                       // Ärmel
+      const sl=new THREE.Mesh(new THREE.BoxGeometry(.36,.5,.36),mat(cfg.robe));
+      sl.position.set(sd*.56,1.2,0); g.add(sl);
     }
   }
   const body=new THREE.Mesh(new THREE.BoxGeometry(.8,1,.45),mat(cfg.body)); body.position.y=1; g.add(body);
@@ -1245,18 +1266,49 @@ function makeStarDestroyer(){
   return g;
 }
 function makeXwingShip(col){
-  const g=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c});
-  const body=new THREE.Mesh(new THREE.BoxGeometry(9,1.6,1.8),mat(col)); g.add(body);
-  const nose=new THREE.Mesh(new THREE.BoxGeometry(3,1.2,1.2),mat(shade(col,0.05))); nose.position.x=5.5; g.add(nose);
-  const cock=new THREE.Mesh(new THREE.BoxGeometry(2,1.2,1.6),mat(0x9fd8ff)); cock.position.set(1.5,1.3,0); g.add(cock);
-  for(const sy of[-1,1])for(const sz of[-1,1]){
-    const w=new THREE.Mesh(new THREE.BoxGeometry(7,.5,2.6),mat(0xdad6cc));
-    w.position.set(-2,sy*1.1,sz*2.6); w.rotation.x=sy*sz*0.16; g.add(w);
-    const eng=new THREE.Mesh(new THREE.BoxGeometry(4,1.1,1.1),mat(0x8b949e));
-    eng.position.set(-2,sy*1.1,sz*2.6); g.add(eng);
-    const fl=new THREE.Mesh(new THREE.BoxGeometry(1,.8,.8),new THREE.MeshBasicMaterial({color:0xff8a3c}));
-    fl.position.set(-4.6,sy*1.1,sz*2.6); g.add(fl);
+  const g=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
+  const white=0xd9d6cc, grey=0x8b9099, dark=0x4a4f57, red=0xc4453a;
+  // schlanker Rumpf mit spitzer Nase
+  const body=new THREE.Mesh(new THREE.BoxGeometry(9,1.7,1.9),mat(white)); g.add(body);
+  const mid=new THREE.Mesh(new THREE.BoxGeometry(4,2.1,2.2),mat(white)); mid.position.x=-1.2; g.add(mid);
+  const n1=new THREE.Mesh(new THREE.BoxGeometry(3.4,1.35,1.5),mat(white)); n1.position.set(6,0,0); g.add(n1);
+  const n2=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.9,1.0),mat(grey));  n2.position.set(8.6,0,0); g.add(n2);
+  const n3=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.5,0.5),mat(dark));  n3.position.set(10.4,0,0); g.add(n3);
+  // Farbstreifen
+  for(const sz of[-1,1]){
+    const st=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.35,0.12),mat(red));
+    st.position.set(6,0.5,sz*0.8); g.add(st);
   }
+  // Cockpit mit Kanzel
+  const cbase=new THREE.Mesh(new THREE.BoxGeometry(3,1,2),mat(grey)); cbase.position.set(1.6,1.3,0); g.add(cbase);
+  const canopy=new THREE.Mesh(new THREE.BoxGeometry(2.4,1,1.6),
+    new THREE.MeshLambertMaterial({color:0x2d3a44,transparent:true,opacity:.75})); canopy.position.set(1.6,2.1,0); g.add(canopy);
+  // Astromech hinter dem Cockpit
+  const dome=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.9,1.2),mat(0xdcdcdc)); dome.position.set(-0.9,1.9,0); g.add(dome);
+  const eye=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,0.1),new THREE.MeshBasicMaterial({color:0x2f6fb5}));
+  eye.position.set(-0.35,2.0,0.6); g.add(eye);
+  // vier Flügel im X, jeweils mit Triebwerk und Kanone
+  for(const sy of[1,-1])for(const sz of[1,-1]){
+    const wing=new THREE.Mesh(new THREE.BoxGeometry(7.5,0.45,3.4),mat(white));
+    wing.position.set(-4.6, sy*1.5, sz*3.2);
+    wing.rotation.x=sy*sz*0.22; wing.rotation.z=sy*0.10; g.add(wing);
+    for(let k=0;k<2;k++){
+      const band=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,3.0),mat(red));
+      band.position.set(-6.4+k*1.6, sy*1.6, sz*3.2); band.rotation.x=sy*sz*0.22; g.add(band);
+    }
+    const eng=new THREE.Mesh(new THREE.BoxGeometry(5.4,1.5,1.5),mat(grey));
+    eng.position.set(-4.4, sy*1.5, sz*2.0); g.add(eng);
+    const intake=new THREE.Mesh(new THREE.BoxGeometry(0.6,1.7,1.7),mat(dark));
+    intake.position.set(-1.8, sy*1.5, sz*2.0); g.add(intake);
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.1,1.1),new THREE.MeshBasicMaterial({color:0xff8a3c}));
+    fl.position.set(-7.4, sy*1.5, sz*2.0); g.add(fl);
+    // Laserkanone an der Flügelspitze
+    const gun=new THREE.Mesh(new THREE.BoxGeometry(6,0.32,0.32),mat(dark));
+    gun.position.set(-3.6, sy*1.5+sy*sz*0.75, sz*4.7); g.add(gun);
+    const tip=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.42,0.42),new THREE.MeshBasicMaterial({color:0xff3b30}));
+    tip.position.set(-0.6, sy*1.5+sy*sz*0.75, sz*4.7); g.add(tip);
+  }
+  g.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
   return g;
 }
 function makeFalcon(){
@@ -1339,10 +1391,14 @@ function makeSpeeder(){
 const SKINS={
   held:   {name:'Jedi-Wanderer', scale:1,
            cfg:{skin:0xd9a066,body:0xb9a17c,arms:0xc9b189,legs:0x6f5b3e,hood:0xa8916b,belt:0x6b5334}},
-  yoda:   {name:'Meister Yoda', scale:0.66,
-           cfg:{skin:0x9fc46a,body:0x8a7042,arms:0x9a7d4c,legs:0x6d5834,ears:0x9fc46a,earLen:1.0,earTilt:0.42,belt:0x5b4a2c}},
-  grogu:  {name:'Grogu', scale:0.46,
-           cfg:{skin:0xa8cf74,body:0xd8cba6,arms:0xcfc199,legs:0xc0b48d,ears:0xa8cf74,earLen:1.25,earTilt:0.15}},
+  yoda:   {name:'Meister Yoda', scale:0.68,
+           cfg:{skin:0x9ec96b,body:0x8a7042,arms:0x9ec96b,legs:0x6d5834,
+                ears:0x9ec96b,earLen:1.15,earTilt:0.5,robe:0x9c8556,belt:0x5b4a2c,
+                headScale:1.12,eyes:0x2a2b22}},
+  grogu:  {name:'Grogu', scale:0.44,
+           cfg:{skin:0xa9d178,body:0xd8cba6,arms:0xa9d178,legs:0xbfb289,
+                ears:0xa9d178,earLen:1.9,earTilt:0.05,robe:0xd8cba6,
+                headScale:1.55,eyes:0x201f1a}},
   trooper:{name:'Sturmtruppler', scale:1,
            cfg:{skin:0xf2f2f2,body:0xf5f5f5,arms:0xe8e8e8,legs:0xdddddd,helmet:0xffffff,belt:0x20242c}},
   sith:   {name:'Dunkler Lord', scale:1.06,
