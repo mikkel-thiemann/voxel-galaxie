@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 7 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 8 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -237,7 +237,7 @@
 // ======================================================================
 //  VOXEL WARS · gestreamte Voxel-Galaxie, 1800 x 1800 Blöcke
 // ======================================================================
-const CS=32, WR=900;
+const CS=32, WR=1600;
 const BIOME_NAMES=['TATOOINE','HOTH','ENDOR','MUSTAFAR'];
 let VIEW=7;
 
@@ -254,27 +254,27 @@ function smooth(e0,e1,x){ const t=clamp((x-e0)/(e1-e0),0,1); return t*t*(3-2*t);
 let _s=98765; const rnd=()=>{_s=(_s*1664525+1013904223)&0x7fffffff; return _s/0x7fffffff;};
 const rr=(a,b)=>a+rnd()*(b-a), ri=(a,b)=>Math.floor(rr(a,b+1));
 
-const BLEND=150;
+const BLEND=260;
 function biomeWeights(x,z){ const bx=smooth(-BLEND,BLEND,x), bz=smooth(-BLEND,BLEND,z);
   return [(1-bx)*(1-bz), bx*(1-bz), (1-bx)*bz, bx*bz]; }
 function biomeAt(x,z){ const w=biomeWeights(x,z); let m=0,i=0; for(let k=0;k<4;k++) if(w[k]>m){m=w[k];i=k;} return i; }
-function lavaNoise(x,z){ return fbm(x+430,z-940,4,0.010); }
+function lavaNoise(x,z){ return fbm(x+430,z-940,4,0.0075); }
 
 function baseH(x,z){
   const w=biomeWeights(x,z); let h=0;
   if(w[0]>0.001){
-    const dune=12+fbm(x+900,z+400,4,0.012)*18+Math.sin(x*0.03)*3;
-    const mesa=fbm(x-300,z+700,3,0.0045), can=fbm(x+55,z-410,2,0.006);
+    const dune=12+fbm(x+900,z+400,4,0.009)*22+Math.sin(x*0.022)*4;
+    const mesa=fbm(x-300,z+700,3,0.0034), can=fbm(x+55,z-410,2,0.0045);
     h+=w[0]*(dune+Math.min(60,mesa>0.58?(mesa-0.58)*260:0)-Math.min(26,can<0.34?(0.34-can)*130:0));
   }
   if(w[1]>0.001){
-    const pl=14+fbm(x+120,z-560,4,0.009)*14, rg=fbm(x-70,z+330,3,0.0055);
+    const pl=14+fbm(x+120,z-560,4,0.007)*16, rg=fbm(x-70,z+330,3,0.0042);
     h+=w[1]*(pl+Math.min(48,rg>0.60?(rg-0.60)*220:0));
   }
-  if(w[2]>0.001) h+=w[2]*(16+fbm(x-800,z-120,5,0.013)*30+fbm(x+50,z+50,2,0.004)*22);
+  if(w[2]>0.001) h+=w[2]*(16+fbm(x-800,z-120,5,0.010)*34+fbm(x+50,z+50,2,0.003)*26);
   if(w[3]>0.001){
     const ln=lavaNoise(x,z);
-    h+=w[3]*(20+fbm(x+11,z-77,4,0.016)*30+(fbm(x,z,3,0.02)>0.60?18:0)+(ln<0.36?-16:0));
+    h+=w[3]*(20+fbm(x+11,z-77,4,0.012)*34+(fbm(x,z,3,0.015)>0.60?22:0)+(ln<0.36?-18:0));
   }
   return h;
 }
@@ -505,82 +505,250 @@ function lavaBridge(x0,z0,x1,z1,y){
 // ---------- Landmarken -------------------------------------------------
 function addLandmark(o){ o.baseY=Math.round(baseH(o.x,o.z)); o.built=false; LAND.push(o); return o; }
 
-const L_TOWN=addLandmark({name:'Mos Voxel',x:-430,z:-400,r:70,flatR:46,build(){
-  const c=this;
-  domeHouse(c.x,c.z,9,6,0xd6bb8c); domeHouse(c.x+22,c.z+12,7,5,0xcbae7c);
-  domeHouse(c.x-20,c.z+16,8,5,0xdcc194); domeHouse(c.x+8,c.z-24,6,6,0xd0b382);
-  domeHouse(c.x-26,c.z-14,6,4,0xc8ab7a); domeHouse(c.x+26,c.z-10,5,4,0xd6bb8c);
-  const can=[0xb5453a,0xc9772f,0x4e7d63,0x9c3f5e,0xc9a13a,0x6b8fb5];
-  for(let i=0;i<12;i++) stall(c.x-26+(i%6)*10, c.z+(i<6?32:44), can[i%6]);
-  for(let i=0;i<10;i++) lampPost(c.x-28+(i%5)*14, c.z+(i<5?27:49));
-  for(let i=0;i<9;i++) vaporator(c.x+ri(-40,40), c.z+ri(-40,40), ri(8,15));
-  banner(c.x-10,c.z+38,7,0xa33c3c); banner(c.x+16,c.z+38,7,0x3c6ea3);
-}});
-const L_OUTPOST=addLandmark({name:'Dünenposten',x:-680,z:-190,r:40,flatR:24,build(){
-  domeHouse(this.x,this.z,7,5,0xcbae7c);
-  for(let i=0;i<5;i++) vaporator(this.x+ri(-20,20),this.z+ri(-20,20),ri(7,12));
-  for(let i=0;i<3;i++) stall(this.x+ri(-14,14),this.z+ri(-14,14),0xc9772f);
-}});
-const L_CANYON=addLandmark({name:'Sarlacc-Schlucht',x:-230,z:-660,r:46,flatR:0,build(){
-  const c=this;
-  for(let a=0;a<60;a++){
-    const an=a/60*Math.PI*2, r=14+Math.sin(a)*2;
-    const x=Math.round(c.x+Math.cos(an)*r), z=Math.round(c.z+Math.sin(an)*r);
-    for(let y=0;y<3;y++) putBlock(x,gy(x,z)+1+y,z,0xb2895a);
+// ---------- zusätzliche Bauteile ----------
+function crenelWall(x0,z0,x1,z1,h,col){          // Mauer mit Zinnen
+  const n=Math.max(Math.abs(x1-x0),Math.abs(z1-z0));
+  for(let i=0;i<=n;i++){
+    const x=Math.round(lerp(x0,x1,i/n)), z=Math.round(lerp(z0,z1,i/n)), b=gy(x,z)+1;
+    for(let y=0;y<h;y++) putBlock(x,b+y,z,shade(col,(hash2(x+y,z)-0.5)*0.10));
+    if(i%3===0){ putBlock(x,b+h,z,shade(col,0.05)); putBlock(x,b+h+1,z,shade(col,-0.05)); }
   }
-  for(let i=0;i<6;i++) vaporator(c.x+ri(-30,30),c.z+ri(-30,30),ri(6,10));
+}
+function archGate(cx,cz,w,h,col,vert){           // Torbogen
+  const b=gy(cx,cz)+1;
+  for(const sd of[-1,1]){
+    for(let y=0;y<h;y++){
+      const x=vert?cx:cx+sd*w, z=vert?cz+sd*w:cz;
+      for(let t=-1;t<=1;t++) putBlock(vert?x+t:x, b+y, vert?z:z+t, shade(col,(hash2(x+y,z+t)-0.5)*0.08));
+    }
+  }
+  for(let i=-w;i<=w;i++){
+    const dy=Math.round(Math.sqrt(Math.max(0,w*w-i*i))*0.45);
+    for(let t=-1;t<=1;t++){
+      const x=vert?cx+t:cx+i, z=vert?cz+i:cz+t;
+      putBlock(x,b+h+dy,z,col); putBlock(x,b+h+dy+1,z,shade(col,-0.06));
+    }
+  }
+}
+function stairsUp(cx,cz,h,dx,dz,col){            // Treppe nach oben
+  const b=gy(cx,cz)+1;
+  for(let i=0;i<h;i++)
+    for(let w=-1;w<=1;w++){
+      const x=cx+dx*i+(dz?w:0), z=cz+dz*i+(dx?w:0);
+      for(let y=0;y<=i;y++) putBlock(x,b+y,z,shade(col,(hash2(x+y,z)-0.5)*0.08));
+    }
+}
+function roofPyramid(cx,cz,r,y,col){
+  for(let l=0;l<=r;l++)
+    for(let x=-r+l;x<=r-l;x++)for(let z=-r+l;z<=r-l;z++)
+      if(Math.abs(x)===r-l||Math.abs(z)===r-l) putBlock(cx+x,y+l,cz+z,shade(col,(hash2(x+l,z)-0.5)*0.10));
+}
+function landingPad(cx,cz,r,col,glowCol){
+  const b=flatten(cx,cz,r+2,col)+1;
+  for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){
+    const d=Math.hypot(x,z); if(d>r) continue;
+    const ring=(d>r-1.2);
+    putBlock(cx+x,b,cz+z, ring?glowCol:shade(col,(hash2(cx+x,cz+z)-0.5)*0.10), ring);
+  }
+  return b;
+}
+function flatten(cx,cz,r,hex){                   // Plateau anlegen
+  const h=gy(cx,cz);
+  for(let x=cx-r;x<=cx+r;x++)for(let z=cz-r;z<=cz+r;z++){
+    const cur=gy(x,z);
+    if(cur<h) for(let y=cur+1;y<=h;y++) putBlock(x,y,z,hex);
+  }
+  return h;
+}
+function tower(cx,cz,r,h,col,glowCol,step){      // Rundturm mit Zinnenkranz
+  const b=gy(cx,cz)+1;
+  for(let y=0;y<h;y++){
+    const rad=Math.max(2,r-Math.floor(y/(h/(step||3))));
+    for(let a=0;a<Math.round(rad*8);a++){
+      const an=a/Math.round(rad*8)*Math.PI*2;
+      const x=Math.round(cx+Math.cos(an)*rad), z=Math.round(cz+Math.sin(an)*rad);
+      const win=(y%5===2&&a%7===0);
+      putBlock(x,b+y,z, win?glowCol:shade(col,(hash2(x+y,z)-0.5)*0.10), win);
+    }
+  }
+  const rt=Math.max(2,r-2);
+  for(let x=-rt;x<=rt;x++)for(let z=-rt;z<=rt;z++)
+    if(Math.hypot(x,z)<=rt) putBlock(cx+x,b+h,cz+z,shade(col,-0.05));
+  for(let a=0;a<Math.round(rt*7);a++){
+    const an=a/Math.round(rt*7)*Math.PI*2;
+    if(a%2) continue;
+    putBlock(Math.round(cx+Math.cos(an)*rt),b+h+1,Math.round(cz+Math.sin(an)*rt),col);
+  }
+  return b+h;
+}
+
+const L_TOWN=addLandmark({name:'Mos Voxel',x:-750,z:-700,r:150,flatR:96,build(){
+  const c=this, sand=0xd6bb8c;
+  // grosse Kuppelhäuser mit Nebenkuppeln
+  const houses=[[0,0,16,9],[38,20,12,7],[-34,26,13,8],[14,-40,11,7],[-44,-24,10,6],
+                [44,-16,9,6],[-14,52,10,6],[30,48,9,6],[-56,8,8,5]];
+  for(const h of houses){
+    domeHouse(c.x+h[0],c.z+h[1],h[2],h[3],shade(sand,(hash2(h[0],h[1])-0.5)*0.10));
+    if(h[2]>10) domeHouse(c.x+h[0]+h[2]+4,c.z+h[1]+3,Math.round(h[2]*0.45),4,shade(sand,-0.05));
+  }
+  // Stadttor und Mauerstücke
+  crenelWall(c.x-70,c.z-60,c.x+70,c.z-60,7,0xc4a878);
+  crenelWall(c.x-70,c.z-60,c.x-70,c.z+70,7,0xc4a878);
+  crenelWall(c.x+70,c.z-60,c.x+70,c.z+70,7,0xc4a878);
+  archGate(c.x,c.z-60,5,8,0xd6bb8c,false);
+  // Marktstrasse: zwei Reihen mit Laternen
+  const can=[0xb5453a,0xc9772f,0x4e7d63,0x9c3f5e,0xc9a13a,0x6b8fb5];
+  for(let i=0;i<20;i++) stall(c.x-46+(i%10)*11, c.z+(i<10?62:78), can[i%6]);
+  for(let i=0;i<12;i++) lampPost(c.x-48+(i%6)*20, c.z+(i<6?56:84));
+  banner(c.x-16,c.z+70,9,0xa33c3c); banner(c.x+22,c.z+70,9,0x3c6ea3);
+  // Zentraler Brunnen mit Denkmal
+  const b=flatten(c.x-4,c.z+28,9,sand)+1;
+  for(let a=0;a<40;a++){ const an=a/40*Math.PI*2;
+    putBlock(Math.round(c.x-4+Math.cos(an)*6),b,Math.round(c.z+28+Math.sin(an)*6),0xb59a6a); }
+  for(let y=0;y<9;y++) fillBox(c.x-5,b+y,c.z+27,3,1,3, y===8?0xffc766:0x8b7a56, y===8);
+  // Landeplattform
+  landingPad(c.x+62,c.z+56,11,0xb9a37c,0xffc766);
+  for(let i=0;i<14;i++) vaporator(c.x+ri(-70,70), c.z+ri(-55,90), ri(9,18));
 }});
-const L_BASE=addLandmark({name:'Echo-Basis',x:430,z:-420,r:90,flatR:56,build(){
+
+const L_OUTPOST=addLandmark({name:'Dünenposten',x:-1190,z:-330,r:75,flatR:44,build(){
   const c=this;
-  iceWall(c.x-40,c.z-26,c.x+40,c.z-26,6); iceWall(c.x-40,c.z+26,c.x+40,c.z+26,6);
-  iceWall(c.x-40,c.z-26,c.x-40,c.z+26,6); iceWall(c.x+40,c.z-26,c.x+40,c.z+26,6);
-  for(let i=0;i<5;i++) xwing(c.x-30+i*15,c.z+14,i%2?0xd6753a:0xc8c2b4);
-  for(let i=0;i<4;i++) snowSpeeder(c.x-24+i*16,c.z-14);
-  shieldDome(c.x+30,c.z+2,12);
-  trench(c.x-46,c.z-60,52,false); trench(c.x-46,c.z-72,52,false);
-  for(let i=0;i<6;i++) vaporator(c.x+ri(-44,44),c.z+ri(-30,30),ri(9,16));
-  banner(c.x-4,c.z-24,8,0xd6753a);
-  fillBox(c.x-8,gy(c.x,c.z)+1,c.z-4,17,5,9,0xb8c6d4,false,0.08);
-  fillBox(c.x-6,gy(c.x,c.z)+2,c.z-2,13,3,5,0x0d1116);
+  domeHouse(c.x,c.z,11,6,0xcbae7c);
+  domeHouse(c.x+22,c.z+14,7,5,0xd6bb8c);
+  crenelWall(c.x-26,c.z-24,c.x+26,c.z-24,6,0xbfa377);
+  archGate(c.x,c.z-24,4,7,0xcbae7c,false);
+  for(let i=0;i<8;i++) vaporator(c.x+ri(-34,34),c.z+ri(-30,34),ri(8,15));
+  for(let i=0;i<5;i++) stall(c.x+ri(-22,22),c.z+ri(6,30),0xc9772f);
+  landingPad(c.x-28,c.z+26,8,0xb9a37c,0xffc766);
 }});
-const L_CAVE=addLandmark({name:'Eishöhle',x:690,z:-160,r:40,flatR:20,build(){ iceCave(this.x,this.z); }});
-const L_VILLAGE=addLandmark({name:'Ewok-Dorf',x:-420,z:430,r:70,flatR:0,build(){
+
+const L_CANYON=addLandmark({name:'Sarlacc-Schlucht',x:-400,z:-1150,r:90,flatR:0,build(){
+  const c=this;
+  for(let ring=0;ring<3;ring++){
+    const r=20+ring*7;
+    for(let a=0;a<r*6;a++){
+      const an=a/(r*6)*Math.PI*2;
+      const x=Math.round(c.x+Math.cos(an)*r), z=Math.round(c.z+Math.sin(an)*r);
+      for(let y=0;y<3+ring;y++) putBlock(x,gy(x,z)+1+y,z,shade(0xb2895a,(hash2(x,z+y)-0.5)*0.12));
+    }
+  }
+  for(let i=0;i<10;i++) vaporator(c.x+ri(-60,60),c.z+ri(-60,60),ri(7,13));
+  landingPad(c.x,c.z+34,12,0xc3a271,0xffc766);      // Landefeld für den Falken
+  for(let i=0;i<6;i++) lampPost(c.x+ri(-30,30),c.z+ri(20,48));
+}});
+
+const L_BASE=addLandmark({name:'Echo-Basis',x:750,z:-730,r:170,flatR:112,build(){
+  const c=this, ice=0xc9dced;
+  crenelWall(c.x-80,c.z-50,c.x+80,c.z-50,8,ice);
+  crenelWall(c.x-80,c.z+55,c.x+80,c.z+55,8,ice);
+  crenelWall(c.x-80,c.z-50,c.x-80,c.z+55,8,ice);
+  crenelWall(c.x+80,c.z-50,c.x+80,c.z+55,8,ice);
+  archGate(c.x,c.z-50,6,9,ice,false);
+  // grosser Hangar mit Toröffnung
+  const hb=flatten(c.x,c.z,40,0xd7e6f5)+1;
+  fillBox(c.x-22,hb,c.z-16,45,10,26,0xb8c6d4,false,0.08);
+  fillBox(c.x-20,hb+1,c.z-14,41,8,22,0x0d1116);
+  for(let x=-20;x<=20;x+=6) putBlock(c.x+x,hb+9,c.z-16,0x9be7ff,true);
+  // Flugzeuge und Speeder
+  for(let i=0;i<8;i++) xwing(c.x-30+i*9, c.z+34, i%2?0xd6753a:0xc8c2b4);
+  for(let i=0;i<6;i++) snowSpeeder(c.x-34+i*13, c.z-34);
+  shieldDome(c.x+56,c.z+6,20);
+  for(let t=0;t<3;t++) trench(c.x-90,c.z-90-t*14,110,false);
+  for(let i=0;i<10;i++) vaporator(c.x+ri(-84,84),c.z+ri(-60,70),ri(10,20));
+  banner(c.x-8,c.z-46,10,0xd6753a); banner(c.x+10,c.z-46,10,0xd6753a);
+  landingPad(c.x-58,c.z+40,13,0xc3d3e2,0x9be7ff);
+}});
+
+const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:80,flatR:40,build(){
+  const c=this;
+  iceCave(c.x,c.z);
+  for(let i=0;i<10;i++){                              // Eiszacken rundherum
+    const x=c.x+ri(-40,40), z=c.z+ri(-40,40), b=gy(x,z)+1;
+    for(let y=0;y<ri(6,16);y++){
+      const w=Math.max(1,3-Math.floor(y/5));
+      fillBox(x,b+y,z,w,1,w,0x9ecbe8,false,0.10);
+    }
+  }
+  landingPad(c.x-34,c.z+30,9,0xc3d3e2,0x9be7ff);
+}});
+
+const L_VILLAGE=addLandmark({name:'Ewok-Dorf',x:-730,z:750,r:150,flatR:0,build(){
   const c=this, tops=[];
-  for(let i=0;i<7;i++){
-    const x=c.x+Math.round(Math.cos(i/7*6.28)*26), z=c.z+Math.round(Math.sin(i/7*6.28)*26);
-    const ty=bigTree(x,z,ri(22,30),ri(6,9)); treeHouse(x,z,ty-8); tops.push({x,z,y:ty-8});
+  for(let i=0;i<10;i++){
+    const an=i/10*6.283, r=44+((i%3)*9);
+    const x=c.x+Math.round(Math.cos(an)*r), z=c.z+Math.round(Math.sin(an)*r);
+    const ty=bigTree(x,z,ri(34,46),ri(9,13));
+    treeHouse(x,z,ty-12);
+    roofPyramid(x,z,6,ty-7,0x5a4126);
+    treeHouse(x,z,ty-24);                              // zweite Ebene
+    tops.push({x,z,y:ty-12});
   }
   for(let i=1;i<tops.length;i++) ropeBridge(tops[i-1].x,tops[i-1].z,tops[i].x,tops[i].z,tops[i].y+1);
   ropeBridge(tops[tops.length-1].x,tops[tops.length-1].z,tops[0].x,tops[0].z,tops[0].y+1);
-  for(let i=0;i<30;i++) lampPost(c.x+ri(-34,34),c.z+ri(-34,34));
-  banner(c.x,c.z-10,6,0xd6753a);
-}});
-const L_WRECK=addLandmark({name:'Wrack im Wald',x:-640,z:600,r:40,flatR:0,build(){
-  const c=this, b=gy(c.x,c.z)+1;
-  fillBox(c.x-7,b+3,c.z-5,16,7,11,0x8b9877,false,0.10);
-  fillBox(c.x+8,b+6,c.z-3,6,5,7,0x93a07e,false,0.08);
-  for(const p of[[-5,-4],[5,-4],[-5,4],[5,4]]) for(let y=0;y<3;y++) fillBox(c.x+p[0],b+y,c.z+p[1],3,1,3,0x7d8a6a);
-  for(let i=0;i<50;i++) putBlock(c.x+ri(-10,10), b+ri(3,9), c.z+ri(-8,8), 0x38792f);
-  for(let i=0;i<8;i++) bigTree(c.x+ri(-26,26),c.z+ri(-26,26),ri(14,20),ri(4,6));
-}});
-const L_FORT=addLandmark({name:'Imperiale Festung',x:450,z:450,r:90,flatR:48,build(){
-  const c=this, b=gy(c.x,c.z)+1;
-  imperialTower(c.x,c.z,40,8); imperialTower(c.x-26,c.z+18,28,5);
-  imperialTower(c.x+22,c.z-20,32,5); imperialTower(c.x-18,c.z-26,24,4);
-  fillBox(c.x-14,b-1,c.z-14,29,1,29,0x241d22,false,0.10);
-  lavaBridge(c.x-60,c.z,c.x-14,c.z,b); lavaBridge(c.x,c.z+60,c.x,c.z+14,b);
-  for(let i=0;i<8;i++){
-    const x=c.x+ri(-30,30), z=c.z+ri(-30,30);
-    for(let y=0;y<ri(4,12);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2);
+  // Dorfplatz mit Feuerstelle und Hütten am Boden
+  const b=gy(c.x,c.z)+1;
+  for(let a=0;a<26;a++){ const an=a/26*6.283;
+    putBlock(Math.round(c.x+Math.cos(an)*7),b,Math.round(c.z+Math.sin(an)*7),0x6b5230); }
+  fillBox(c.x-1,b,c.z-1,3,1,3,0xff8a3c,true);
+  for(let i=0;i<7;i++){
+    const x=c.x+ri(-32,32), z=c.z+ri(-32,32), hb=gy(x,z)+1;
+    for(let y=0;y<4;y++)for(let dx=-3;dx<=3;dx++)for(let dz=-3;dz<=3;dz++)
+      if(Math.abs(dx)===3||Math.abs(dz)===3) putBlock(x+dx,hb+y,z+dz,0x6a4c2d);
+    roofPyramid(x,z,4,hb+4,0x4d3a22);
+    putBlock(x,hb+2,z+3,0xffc766,true);
   }
-  banner(c.x-16,c.z+4,9,0xff2f14);
+  for(let i=0;i<40;i++) lampPost(c.x+ri(-60,60),c.z+ri(-60,60));
+  banner(c.x,c.z-16,8,0xd6753a);
 }});
-const L_MINE=addLandmark({name:'Lava-Mine',x:700,z:250,r:44,flatR:26,build(){
+
+const L_WRECK=addLandmark({name:'Wrack im Wald',x:-1120,z:1050,r:80,flatR:0,build(){
   const c=this, b=gy(c.x,c.z)+1;
-  fillBox(c.x-9,b,c.z-9,19,1,19,0x2f272a,false,0.10);
-  imperialTower(c.x,c.z,16,3);
-  for(let i=0;i<10;i++){ const x=c.x+ri(-16,16), z=c.z+ri(-16,16); fillBox(x,gy(x,z)+1,z,2,ri(2,5),2,0x3a3034,false,0.1); }
-  for(let i=0;i<14;i++){ const x=c.x+ri(-18,18), z=c.z+ri(-18,18); putBlock(x,gy(x,z)+1,z,0xff5f14,true); }
+  fillBox(c.x-14,b+5,c.z-10,32,13,21,0x8b9877,false,0.10);      // Rumpf
+  fillBox(c.x+16,b+10,c.z-6,12,9,13,0x93a07e,false,0.08);       // Kopf
+  for(const p2 of[[-10,-8],[10,-8],[-10,8],[10,8]])
+    for(let y=0;y<6;y++) fillBox(c.x+p2[0],b+y,c.z+p2[1],5,1,5,0x7d8a6a,false,0.08);
+  for(let i=0;i<160;i++) putBlock(c.x+ri(-18,26),b+ri(4,17),c.z+ri(-12,12),0x38792f);
+  for(let i=0;i<14;i++) bigTree(c.x+ri(-50,50),c.z+ri(-50,50),ri(20,32),ri(6,9));
+  for(let i=0;i<10;i++) lampPost(c.x+ri(-30,30),c.z+ri(-30,30));
+}});
+
+const L_FORT=addLandmark({name:'Imperiale Festung',x:790,z:790,r:180,flatR:104,build(){
+  const c=this, dark=0x241d22, glow=0xff2f14;
+  const b=flatten(c.x,c.z,46,0x1b1518)+1;
+  fillBox(c.x-30,b-1,c.z-30,61,1,61,dark,false,0.10);            // Fundamentplatte
+  tower(c.x,c.z,11,70,dark,glow,4);                              // Hauptturm
+  tower(c.x-40,c.z+28,7,44,dark,glow,3);
+  tower(c.x+36,c.z-30,7,50,dark,glow,3);
+  tower(c.x-28,c.z-40,6,38,dark,glow,3);
+  tower(c.x+42,c.z+36,6,34,dark,glow,3);
+  crenelWall(c.x-46,c.z-46,c.x+46,c.z-46,10,0x1f191d);
+  crenelWall(c.x-46,c.z+46,c.x+46,c.z+46,10,0x1f191d);
+  crenelWall(c.x-46,c.z-46,c.x-46,c.z+46,10,0x1f191d);
+  crenelWall(c.x+46,c.z-46,c.x+46,c.z+46,10,0x1f191d);
+  archGate(c.x,c.z-46,7,11,0x2b2228,false);
+  lavaBridge(c.x-110,c.z,c.x-46,c.z,b);
+  lavaBridge(c.x,c.z+110,c.x,c.z+46,b);
+  stairsUp(c.x,c.z-40,8,0,1,0x2b2228);
+  for(let i=0;i<14;i++){
+    const x=c.x+ri(-60,60), z=c.z+ri(-60,60);
+    for(let y=0;y<ri(6,18);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2);
+  }
+  banner(c.x-26,c.z+8,12,glow); banner(c.x+26,c.z+8,12,glow);
+  landingPad(c.x,c.z+70,14,0x2b2228,0xff2f14);
+}});
+
+const L_MINE=addLandmark({name:'Lava-Mine',x:1220,z:440,r:90,flatR:48,build(){
+  const c=this, b=flatten(c.x,c.z,26,0x2f272a)+1;
+  fillBox(c.x-18,b,c.z-18,37,1,37,0x2f272a,false,0.10);
+  tower(c.x,c.z,6,30,0x241d22,0xff2f14,3);
+  crenelWall(c.x-24,c.z-24,c.x+24,c.z-24,7,0x1f191d);
+  archGate(c.x,c.z-24,5,8,0x2b2228,false);
+  for(let i=0;i<16;i++){                                          // Förderklötze
+    const x=c.x+ri(-30,30), z=c.z+ri(-30,30);
+    fillBox(x,gy(x,z)+1,z,3,ri(3,8),3,0x3a3034,false,0.10);
+  }
+  for(let i=0;i<24;i++){ const x=c.x+ri(-34,34), z=c.z+ri(-34,34); putBlock(x,gy(x,z)+1,z,0xff5f14,true); }
+  landingPad(c.x-36,c.z+30,10,0x2b2228,0xff2f14);
 }});
 
 function ensureLandmarks(cx,cz){
@@ -602,7 +770,7 @@ function propsForChunk(cx,cz){
     if(near) continue;
     const b=biomeAt(x,z), h=hash2(x*3+1,z*5+2);
     if(b===2){
-      if(h<0.72) bigTree(x,z,ri(10,20),ri(3,6));
+      if(h<0.72) bigTree(x,z,ri(14,28),ri(4,8));
       else if(h<0.86){ const g=gy(x,z)+1; for(let k=0;k<ri(2,5);k++) putBlock(x,g+k,z,0x6b7f5a); }
       else lampPost(x,z);
     } else if(b===0){
@@ -1063,7 +1231,7 @@ function applySkin(id){
 // ======================================================================
 //  Spieler / Quests
 // ======================================================================
-const player={pos:new THREE.Vector3(L_TOWN.x+30,60,L_TOWN.z+30),vel:new THREE.Vector3(),
+const player={pos:new THREE.Vector3(L_TOWN.x+40,80,L_TOWN.z+40),vel:new THREE.Vector3(),
   yaw:2.2,pitch:-0.2,onGround:false,hp:100,force:100,alive:true,attack:0,walkT:0,inSpeeder:false,
   checkpoint:new THREE.Vector3(),inShip:null,held:null,shield:0,shieldMax:0,shipHP:100,shipMax:100,hpMax:100,airKills:0,groundKills:0,coins:0,paidAir:0,paidGround:0};
 let playerModel,saberModel,camDist=8,saberDamage=2,saberReach=3.6,saberColor=0x4fc3ff,saberDouble=false;
@@ -1080,7 +1248,7 @@ const quests=[
   {id:'droids',giver:'Jorra',title:'Patrouillen ausschalten',biome:0,type:'kill',need:6,have:0,
    desc:'Sechs imperiale Patrouillen machen die Dünen unsicher. Räum sie weg, dann reden wir über Rabatt.',
    done:'Der Markt atmet auf. Der Speeder da drüben gehört jetzt dir.'},
-  {id:'cave',giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:26,
+  {id:'cave',giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:45,
    desc:'Unser Späher ist nicht zurückgekommen. Sein Signal kommt aus einer Eishöhle weit im Osten. Folge dem Kompass.',
    done:'Signal bestätigt. Du bist zäher als das halbe Geschwader.'},
   {id:'dogfight',giver:'Ilana',title:'Luftüberlegenheit',biome:1,type:'kill_air',need:8,have:0,
@@ -1092,13 +1260,13 @@ const quests=[
   {id:'forest',giver:'Wicket',title:'Den Wald verteidigen',biome:2,type:'kill',need:5,have:0,
    desc:'Weissrüstungen stapfen durch unser Dorf. Fünf davon — dann ist wieder Ruhe unter den Bäumen.',
    done:'Der Wald singt wieder. Du bist jetzt einer von uns.'},
-  {id:'wreck',giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:26,
+  {id:'wreck',giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:45,
    desc:'Tief im Wald liegt ein toter Stahlriese, von Ranken verschlungen. Sieh nach, ob darin noch etwas lebt.',
    done:'Nur Rost und Geister. Gut, dass du zurück bist.'},
-  {id:'mine',giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:26,
+  {id:'mine',giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:45,
    desc:'Das Imperium bricht auf der Lavawelt Erz. Erreiche die Mine im Norden der Feuerebene.',
    done:'Gut. Jetzt weisst du, wo ihre Waffen herkommen.'},
-  {id:'fortress',giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:28,
+  {id:'fortress',giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,
    desc:'Die letzte Prüfung: der Kern der imperialen Festung. Von dort kontrollieren sie diesen Sektor.',
    done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'}
 ];
@@ -1149,7 +1317,7 @@ function spawnQuestItems(q){
   const c=q.biome===0?L_TOWN:q.biome===1?L_BASE:q.biome===2?L_VILLAGE:L_FORT;
   q._spots=[];
   for(let i=0;i<q.need;i++){
-    const a=rnd()*Math.PI*2, d=rr(70,190);
+    const a=rnd()*Math.PI*2, d=rr(90,240);
     const x=Math.round(c.x+Math.cos(a)*d), z=Math.round(c.z+Math.sin(a)*d);
     addPickup(x,z,q.tag,q.tag==='cell'?0xffd23f:0x7fd8ff);
     q._spots.push({x,z});
@@ -1157,16 +1325,16 @@ function spawnQuestItems(q){
   q._spot=q._spots[0];
 }
 function populate(){
-  addNPC('Ben',L_TOWN.x+12,L_TOWN.z+8,{skin:0xd8a878,body:0xa88b62,arms:0xbb9a70,legs:0x8d7350,hood:0x9c8158});
-  addNPC('Jorra',L_TOWN.x-6,L_TOWN.z+30,{skin:0xc98f5c,body:0x7c5b3a,arms:0x8a6743,legs:0x5f452c});
-  addNPC('Ilana',L_BASE.x-10,L_BASE.z+6,{skin:0xe4b48c,body:0xd6a05a,arms:0xc9954f,legs:0x8a7a63},'#9be7ff');
-  addNPC('Rax',L_BASE.x+14,L_BASE.z-8,{skin:0xcf9a70,body:0x5d6b7d,arms:0x53606f,legs:0x3f4a58},'#9be7ff');
-  addNPC('Wicket',L_VILLAGE.x+4,L_VILLAGE.z-6,{skin:0x8a5a34,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x6d4525},'#a8e08a');
-  addNPC('Chief Teeba',L_VILLAGE.x-10,L_VILLAGE.z+10,{skin:0x9a6a3e,body:0x7d5530,arms:0x8a5f36,legs:0x66431f,hood:0x4e3a20},'#a8e08a');
-  addNPC('Solan',L_TOWN.x+26,L_TOWN.z-16,{skin:0xd8b090,body:0x2c2f38,arms:0x353945,legs:0x22252c,hood:0x1d2027},'#ff9a6b');
+  addNPC('Ben',L_TOWN.x+20,L_TOWN.z+16,{skin:0xd8a878,body:0xa88b62,arms:0xbb9a70,legs:0x8d7350,hood:0x9c8158});
+  addNPC('Jorra',L_TOWN.x-10,L_TOWN.z+58,{skin:0xc98f5c,body:0x7c5b3a,arms:0x8a6743,legs:0x5f452c});
+  addNPC('Ilana',L_BASE.x-16,L_BASE.z+30,{skin:0xe4b48c,body:0xd6a05a,arms:0xc9954f,legs:0x8a7a63},'#9be7ff');
+  addNPC('Rax',L_BASE.x+24,L_BASE.z-30,{skin:0xcf9a70,body:0x5d6b7d,arms:0x53606f,legs:0x3f4a58},'#9be7ff');
+  addNPC('Wicket',L_VILLAGE.x+8,L_VILLAGE.z-12,{skin:0x8a5a34,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x6d4525},'#a8e08a');
+  addNPC('Chief Teeba',L_VILLAGE.x-14,L_VILLAGE.z+14,{skin:0x9a6a3e,body:0x7d5530,arms:0x8a5f36,legs:0x66431f,hood:0x4e3a20},'#a8e08a');
+  addNPC('Solan',L_TOWN.x+44,L_TOWN.z-28,{skin:0xd8b090,body:0x2c2f38,arms:0x353945,legs:0x22252c,hood:0x1d2027},'#ff9a6b');
 
   for(let i=0;i<8;i++){
-    const x=L_TOWN.x+ri(-26,26), z=L_TOWN.z+ri(24,50);
+    const x=L_TOWN.x+ri(-46,46), z=L_TOWN.z+ri(50,86);
     const d=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c});
     const b=new THREE.Mesh(new THREE.BoxGeometry(.85,1,.85),mat(i%2?0xd8d8dc:0xd0a028)); b.position.y=.6; d.add(b);
     const h=new THREE.Mesh(new THREE.BoxGeometry(.9,.42,.9),mat(i%2?0x2f6fb5:0xc09020)); h.position.y=1.3; d.add(h);
@@ -1175,7 +1343,7 @@ function populate(){
     d.position.set(x,terrainH(x,z)+1,z); scene.add(d);
   }
   for(let i=0;i<6;i++){
-    const x=L_VILLAGE.x+ri(-24,24), z=L_VILLAGE.z+ri(-24,24);
+    const x=L_VILLAGE.x+ri(-40,40), z=L_VILLAGE.z+ri(-40,40);
     const e=makeChar({skin:0x8a5a34,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x5c3d21});
     e.scale.setScalar(.7); e.position.set(x,terrainH(x,z)+1,z); scene.add(e);
   }
@@ -1218,8 +1386,8 @@ function populate(){
   }
 
   // Fliegbare X-Wings (Landeplätze)
-  const shipSpots=[[L_TOWN.x+34,L_TOWN.z+40,0xc8c2b4],[L_BASE.x-34,L_BASE.z+22,0xd6753a],
-                   [L_VILLAGE.x+30,L_VILLAGE.z+30,0xc8c2b4],[L_FORT.x-40,L_FORT.z+34,0xd6753a]];
+  const shipSpots=[[L_TOWN.x+62,L_TOWN.z+56,0xc8c2b4],[L_BASE.x-58,L_BASE.z+40,0xd6753a],
+                   [L_VILLAGE.x+52,L_VILLAGE.z+52,0xc8c2b4],[L_FORT.x,L_FORT.z+70,0xd6753a]];
   for(const sp of shipSpots){
     const g=makeXwingShip(sp[2]); g.scale.setScalar(1.15); noFog(g);
     g.position.set(sp[0], terrainH(sp[0],sp[1])+3, sp[1]);
@@ -1229,7 +1397,7 @@ function populate(){
     scene.add(g); ships.push(g);
   }
   // Millennium Falke — steht immer in der Sandgrube (Sarlacc-Schlucht)
-  const falconSpots=[[L_CANYON.x, L_CANYON.z+20]];
+  const falconSpots=[[L_CANYON.x, L_CANYON.z+34]];
   for(const fp of falconSpots){
     const f=makeFalcon(); f.scale.setScalar(2); noFog(f);
     const fy=terrainH(fp[0],fp[1])+7;
@@ -1241,7 +1409,7 @@ function populate(){
   }
 
   speeder=makeSpeeder();
-  speeder.position.set(L_TOWN.x+18,terrainH(L_TOWN.x+18,L_TOWN.z+34)+2,L_TOWN.z+34);
+  speeder.position.set(L_TOWN.x+30,terrainH(L_TOWN.x+30,L_TOWN.z+58)+2,L_TOWN.z+58);
   speeder.userData.homePos=speeder.position.clone();
   scene.add(speeder);
 }
@@ -2246,7 +2414,7 @@ function respawn(){
     if(ln) discovered.add(ln);
     toast('Wiederbelebt beim X-Wing' + (ln?(' \u2014 ' + ln.name):''));
   } else {
-    const c=player.checkpoint.lengthSq()?player.checkpoint:new THREE.Vector3(L_TOWN.x+30,0,L_TOWN.z+30);
+    const c=player.checkpoint.lengthSq()?player.checkpoint:new THREE.Vector3(L_TOWN.x+40,0,L_TOWN.z+40);
     player.pos.set(c.x,topAt(c.x,c.z)+1,c.z);
   }
   player.vel.set(0,0,0);
@@ -2471,7 +2639,7 @@ function buildWorldImage(){
 }
 function w2i(x,z,N){ return [(x+WR)/(WR*2)*N,(z+WR)/(WR*2)*N]; }
 function drawMinimap(){
-  const cv=$('#map'), g=cv.getContext('2d'), N=cv.width, srcN=worldImg.width, span=srcN/3.2;
+  const cv=$('#map'), g=cv.getContext('2d'), N=cv.width, srcN=worldImg.width, span=srcN/5.5;
   const pi=w2i(player.pos.x,player.pos.z,srcN);
   g.imageSmoothingEnabled=false;
   g.fillStyle='#14171f'; g.fillRect(0,0,N,N);          // unbekanntes Gebiet jenseits der Karte
@@ -2544,7 +2712,7 @@ function doTravel(L){
   toast('Sprung: '+L.name);
 }
 function updateDiscovery(){
-  for(const L of LAND) if(!discovered.has(L)&&Math.hypot(player.pos.x-L.x,player.pos.z-L.z)<75){
+  for(const L of LAND) if(!discovered.has(L)&&Math.hypot(player.pos.x-L.x,player.pos.z-L.z)<130){
     discovered.add(L); toast('Ort entdeckt: '+L.name);
   }
 }
