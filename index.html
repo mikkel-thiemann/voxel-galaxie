@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 16 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 17 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1312,59 +1312,80 @@ function makeXwingShip(col){
   return g;
 }
 function makeFalcon(){
-  const g=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
-  const hull=0xbdb6a8, dark=0x8b857a;
-  // Scheibenrumpf (12-eckig -> kantig wie Voxel)
-  const disc=new THREE.Mesh(new THREE.CylinderGeometry(8,8,1.8,12),mat(hull)); g.add(disc);
-  const top=new THREE.Mesh(new THREE.CylinderGeometry(3.4,4.2,1.4,12),mat(dark)); top.position.y=1.5; g.add(top);
-  const bot=new THREE.Mesh(new THREE.CylinderGeometry(3.0,3.8,1.2,12),mat(dark)); bot.position.y=-1.4; g.add(bot);
-  // Radarschüssel
-  const dish=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.7,.35,10),mat(0xd7d2c6));
-  dish.position.set(-1.5,2.5,3.2); dish.rotation.x=-0.5; g.add(dish);
-  // Bugklauen
+  const g=new THREE.Group();
+  const mat=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
+  const hull=0xbfb8aa, hull2=0xa9a294, dark=0x7b756a, deep=0x585349, glow=0xbfefff;
+
+  // ---- Scheibenrumpf mit abgeschrägten Kanten ----
+  const disc =new THREE.Mesh(new THREE.CylinderGeometry(10,10,2.2,16),mat(hull));   g.add(disc);
+  const rim  =new THREE.Mesh(new THREE.CylinderGeometry(10.6,9.4,0.7,16),mat(hull2)); rim.position.y=-0.5; g.add(rim);
+  const upper=new THREE.Mesh(new THREE.CylinderGeometry(6.2,7.8,1.8,16),mat(hull));  upper.position.y=1.7; g.add(upper);
+  const lower=new THREE.Mesh(new THREE.CylinderGeometry(5.4,7.0,1.1,16),mat(hull2)); lower.position.y=-1.2; g.add(lower);
+
+  // ---- Frachtklauen vorn mit Spalt ----
   for(const sz of[-1,1]){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(6,1.5,2.4),mat(hull));
-    m.position.set(9,0,sz*2.6); g.add(m);
-    const tip=new THREE.Mesh(new THREE.BoxGeometry(2,1.1,1.6),mat(dark));
-    tip.position.set(12.5,0,sz*2.6); g.add(tip);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(7.5,1.7,3.0),mat(hull));
+    arm.position.set(11.5,0,sz*3.1); g.add(arm);
+    const inner=new THREE.Mesh(new THREE.BoxGeometry(6.5,1.0,0.6),mat(deep));
+    inner.position.set(11.2,0,sz*1.7); g.add(inner);
+    const tip=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.2,2.2),mat(hull2));
+    tip.position.set(15.6,0,sz*3.1); g.add(tip);
+    const nub=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.7,0.9),mat(dark));
+    nub.position.set(16.8,0,sz*3.1); g.add(nub);
   }
-  // Cockpitausleger rechts
-  const arm=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.2,1.6),mat(hull));
-  arm.position.set(4.5,0,-7.2); g.add(arm);
-  const cock=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.6,2.2),mat(dark));
-  cock.position.set(7.2,0.2,-8.4); g.add(cock);
-  const glass=new THREE.Mesh(new THREE.BoxGeometry(1.2,1,1.8),new THREE.MeshLambertMaterial({color:0x9fd8ff,transparent:true,opacity:.6}));
-  glass.position.set(8.4,0.3,-8.4); g.add(glass);
-  // Triebwerksschlitz hinten
-  const eng=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.4,11),new THREE.MeshBasicMaterial({color:0xbfefff}));
-  eng.position.set(-8.2,0.2,0); g.add(eng);
-  // Geschütztürme oben und unten
+
+  // ---- Cockpit auf dem Ausleger ----
+  const arm1=new THREE.Mesh(new THREE.BoxGeometry(5.5,1.4,2.0),mat(hull2)); arm1.position.set(5.5,-0.2,-8.0); g.add(arm1);
+  const arm2=new THREE.Mesh(new THREE.BoxGeometry(3.0,1.2,1.6),mat(dark));  arm2.position.set(8.4,-0.2,-9.4); g.add(arm2);
+  const cock=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.8,2.6),mat(hull));  cock.position.set(10.4,0.1,-10.0); g.add(cock);
+  const win =new THREE.Mesh(new THREE.BoxGeometry(0.5,1.0,2.0),
+      new THREE.MeshLambertMaterial({color:0x9fd8ff,transparent:true,opacity:.7}));
+  win.position.set(11.9,0.2,-10.0); g.add(win);
+
+  // ---- Geschützkuppeln oben und unten ----
   for(const sy of[1,-1]){
-    const t=new THREE.Mesh(new THREE.BoxGeometry(1.6,1,1.6),mat(0x6f6a61));
-    t.position.set(0.5,sy*2.6,0); g.add(t);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(1.9,2.2,0.8,10),mat(hull2));
+    base.position.set(0.8,sy*2.0,0); g.add(base);
+    const dome=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,0.9,10),mat(dark));
+    dome.position.set(0.8,sy*2.7,0); g.add(dome);
+    const gun=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.35,3.2),mat(0x4a4f57));
+    gun.position.set(0.8,sy*2.7,1.6); g.add(gun);
   }
-  g.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
-  return g;
-}
-function makeFreighter(){
-  const g=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
-  const hull=0x8b9099, dark=0x6f757d;
-  const body=new THREE.Mesh(new THREE.BoxGeometry(26,7,12),mat(hull)); body.position.y=1; g.add(body);
-  const deck=new THREE.Mesh(new THREE.BoxGeometry(16,3,10),mat(dark)); deck.position.set(-2,5,0); g.add(deck);
-  const nose=new THREE.Mesh(new THREE.BoxGeometry(6,5,8),mat(hull)); nose.position.set(15,1,0); g.add(nose);
-  const cock=new THREE.Mesh(new THREE.BoxGeometry(4,3,6),mat(dark)); cock.position.set(16,5,0); g.add(cock);
-  const glass=new THREE.Mesh(new THREE.BoxGeometry(1.2,2,5),new THREE.MeshLambertMaterial({color:0x9fd8ff,transparent:true,opacity:.6}));
-  glass.position.set(18.2,5,0); g.add(glass);
+
+  // ---- Radarschüssel ----
+  const mast=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.9,0.4),mat(dark)); mast.position.set(-3.0,2.2,3.6); g.add(mast);
+  const dish=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.3,2.4),mat(0xd7d2c6));
+  dish.position.set(-3.0,2.9,3.9); dish.rotation.z=0.22; dish.rotation.x=-0.35; g.add(dish);
+
+  // ---- Triebwerksband hinten ----
+  const engHouse=new THREE.Mesh(new THREE.BoxGeometry(1.8,2.6,13.0),mat(deep)); engHouse.position.set(-9.4,0,0); g.add(engHouse);
+  const engGlow =new THREE.Mesh(new THREE.BoxGeometry(0.5,0.75,11.0),new THREE.MeshBasicMaterial({color:0x7fd0ff}));
+  engGlow.position.set(-10.4,0,0); g.add(engGlow);
+  for(const sz of[-1,1]){                               // seitliche Auslässe
+    const e2=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,2.4),new THREE.MeshBasicMaterial({color:0x7fd0ff}));
+    e2.position.set(-10.2,0,sz*6.6); e2.rotation.y=sz*0.25; g.add(e2);
+  }
+
+  // ---- Aufbauten und Panzerplatten für die Struktur ----
+  const plates=[[3.5,1.9,2.6,2.4,0.5,1.8],[-2.5,1.9,-3.2,3.0,0.6,2.2],[5.5,1.7,-2.0,1.8,0.4,1.4],
+                [-5.5,1.8,1.5,2.6,0.5,2.0],[0.5,1.9,5.0,2.2,0.5,1.6],[-6.5,1.7,-2.5,2.0,0.4,1.6],
+                [4.0,-1.9,3.0,2.2,0.5,1.8],[-4.0,-1.9,-3.0,2.4,0.5,1.8],[-1.0,-2.0,4.5,1.8,0.4,1.4]];
+  for(let i=0;i<plates.length;i++){
+    const p2=plates[i];
+    const b=new THREE.Mesh(new THREE.BoxGeometry(p2[3],p2[4],p2[5]),mat(i%2?hull2:dark));
+    b.position.set(p2[0],p2[1],p2[2]); g.add(b);
+  }
+  for(let i=0;i<10;i++){                                 // Kleinkram auf der Hülle
+    const a=i/10*Math.PI*2, r=4+ (i%3)*1.8;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.35,0.9),mat(i%2?dark:hull2));
+    b.position.set(Math.cos(a)*r, 1.9, Math.sin(a)*r); g.add(b);
+  }
+  // Andockringe an den Seiten
   for(const sz of[-1,1]){
-    const wing=new THREE.Mesh(new THREE.BoxGeometry(12,1.4,7),mat(dark));
-    wing.position.set(-4,1,sz*8.5); g.add(wing);
-    const eng=new THREE.Mesh(new THREE.BoxGeometry(6,3.4,3.4),mat(0x5b6068));
-    eng.position.set(-12,1.5,sz*5); g.add(eng);
-    const fl=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.4,2.4),new THREE.MeshBasicMaterial({color:0xbfefff}));
-    fl.position.set(-15.4,1.5,sz*5); g.add(fl);
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,0.9,10),mat(dark));
+    ring.rotation.x=Math.PI/2; ring.position.set(-1.0,0,sz*9.4); g.add(ring);
   }
-  const ramp=new THREE.Mesh(new THREE.BoxGeometry(7,.6,5),mat(dark));
-  ramp.position.set(2,-2.2,-7.6); ramp.rotation.x=0.35; g.add(ramp);
+
   g.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
   return g;
 }
@@ -1612,11 +1633,11 @@ function populate(){
   // Millennium Falke — steht immer in der Sandgrube (Sarlacc-Schlucht)
   const falconSpots=[[L_CANYON.x, L_CANYON.z+34]];
   for(const fp of falconSpots){
-    const f=makeFalcon(); f.scale.setScalar(2); noFog(f);
+    const f=makeFalcon(); f.scale.setScalar(2.4); noFog(f);
     const fy=terrainH(fp[0],fp[1])+7;
     f.position.set(fp[0],fy,fp[1]);
     f.userData.speed=0; f.userData.kind='falcon'; f.userData.spd=82; f.userData.acc=0.30;
-    f.userData.hull=10; f.userData.hitDmg=1; f.userData.guns=8; f.userData.clear=7;
+    f.userData.hull=10; f.userData.hitDmg=1; f.userData.guns=8; f.userData.clear=9; f.userData.gunY=4;
     f.userData.homePos=new THREE.Vector3(fp[0],fy,fp[1]);
     scene.add(f); ships.push(f);
   }
@@ -2352,7 +2373,7 @@ function toggleSpeeder(){
   }
   if(sh&&!player.inSpeeder){
     player.inShip=sh;
-    camDist=sh.userData.kind==='falcon'?38:(sh.userData.kind==='freighter'?40:17);
+    camDist=sh.userData.kind==='falcon'?46:(sh.userData.kind==='freighter'?40:17);
     player.shipMax=Math.round((sh.userData.hull||100)*hullMul);
     player.shipHP=player.shipMax;
     toast(({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'})[sh.userData.kind||'ship']+
