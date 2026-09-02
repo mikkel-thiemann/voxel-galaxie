@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 13 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 14 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1540,15 +1540,15 @@ function populate(){
     g.userData.homePos=new THREE.Vector3(sp[0], terrainH(sp[0],sp[1])+3, sp[1]);
     scene.add(g); ships.push(g);
   }
-  // Eisfrachter — steht startbereit in der Eishöhle
+  // Schneeriese (AT-AT) — steht startbereit in der Eishöhle
   {
     const fx=L_CAVE.x-4, fz=L_CAVE.z-20;
-    const fr=makeFreighter(); fr.scale.setScalar(1.15); noFog(fr);
-    const fy=terrainH(fx,fz)+5;
+    const fr=makeATAT(0xbfc7d1); fr.scale.setScalar(1.3); noFog(fr);
+    const fy=terrainH(fx,fz)+1;
     fr.position.set(fx,fy,fz);
-    fr.userData.speed=0; fr.userData.kind='freighter'; fr.userData.spd=54; fr.userData.acc=0.40;
-    fr.userData.hull=8; fr.userData.hitDmg=1; fr.userData.guns=6; fr.userData.clear=4;
-    fr.userData.ground=true;   // fährt über den Boden statt zu fliegen
+    fr.userData.speed=0; fr.userData.kind='freighter'; fr.userData.spd=26; fr.userData.acc=0.55;
+    fr.userData.hull=8; fr.userData.hitDmg=1; fr.userData.guns=2; fr.userData.clear=1;
+    fr.userData.ground=true; fr.userData.walker=true; fr.userData.gunY=28; fr.userData.stride=0; fr.userData.camY=24;
     fr.userData.homePos=new THREE.Vector3(fx,fy,fz);
     scene.add(fr); ships.push(fr);
   }
@@ -1839,8 +1839,8 @@ const SHOP=[
    apply:function(l){}},
   {id:'ship',name:'X-Wing Jäger',desc:'wendiges Raumschiff mit zwei Laserkanonen',price:1000,max:1,
    apply:function(l){}},
-  {id:'freighter',name:'Eisfrachter (repariert)',desc:'das Wrack aus der Eishöhle · fährt über den Boden, 8 Leben, sechs Laser',price:2500,max:1,
-   apply:function(l){ toast('Eisfrachter repariert — er steht flugbereit in der Eishöhle'); discovered.add(L_CAVE); }},
+  {id:'freighter',name:'Schneeriese (AT-AT)',desc:'begehbarer AT-AT · stampft über den Boden, 8 Leben, zwei Kopfkanonen',price:2500,max:1,
+   apply:function(l){ toast('Schneeriese einsatzbereit — er wartet in der Eishöhle'); discovered.add(L_CAVE); }},
   {id:'falcon',name:'Millennium Falke',desc:'riesiger Frachter · 10 Leben, acht Laser, Höchsttempo 82',price:10000,max:1,
    apply:function(l){}},
   // --- Lichtschwert ---
@@ -2059,6 +2059,7 @@ function fireBolt(){
     m.material.fog=false;
     const side=new THREE.Vector3(dir.z,0,-dir.x).normalize().multiplyScalar(sgn);
     m.position.copy(ship.position).addScaledVector(dir,6).add(side);
+    if(ship.userData.gunY) m.position.y+=ship.userData.gunY;
     m.lookAt(m.position.clone().add(dir));
     m.userData={dir:dir.clone(),life:2.4};
     scene.add(m); bolts.push(m);
@@ -2285,7 +2286,7 @@ function toggleSpeeder(){
     player.pos.set(ship.position.x, ground, ship.position.z+7);
     toast('Gelandet'); return;
   }
-  const SHIPNAME={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Eisfrachter'};
+  const SHIPNAME={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'};
   const SHIPPRICE={ship:1000,falcon:10000,freighter:2500};
   const sh=nearestShip();
   if(sh&&!player.inSpeeder&&!owned[sh.userData.kind||'ship']){
@@ -2295,11 +2296,11 @@ function toggleSpeeder(){
   }
   if(sh&&!player.inSpeeder){
     player.inShip=sh;
-    camDist=sh.userData.kind==='falcon'?38:(sh.userData.kind==='freighter'?26:17);
+    camDist=sh.userData.kind==='falcon'?38:(sh.userData.kind==='freighter'?40:17);
     player.shipMax=Math.round((sh.userData.hull||100)*hullMul);
     player.shipHP=player.shipMax;
-    toast(({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Eisfrachter'})[sh.userData.kind||'ship']+
-          (sh.userData.ground?' — fährt über den Boden, Linksklick Laser'
+    toast(({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'})[sh.userData.kind||'ship']+
+          (sh.userData.ground?' — stampft los, Linksklick Kopfkanonen'
                              :' startklar — Linksklick Laser, Achtung: TIEs greifen an'));
     return;
   }
@@ -2466,8 +2467,20 @@ function updatePlayer(dt){
     if(ix) ship.position.addScaledVector(new THREE.Vector3(dir.z,0,-dir.x).normalize(), -ix*22*dt);
     const ground=topAt(ship.position.x,ship.position.z), clr=u.clear||2.5;
     if(u.ground){
-      // schwebt dicht über dem Gelände und folgt jeder Steigung
-      ship.position.y=lerp(ship.position.y, ground+clr, 1-Math.pow(0.0006,dt));
+      let bob=0;
+      if(u.walker){
+        // Schreiten: Beine im Wechsel, Rumpf wiegt sich im Takt
+        u.stride+=Math.abs(u.speed)*dt*0.22;
+        const L=u.legs||[];
+        for(let i=0;i<L.length;i++){
+          const ph=u.stride+(i%2?Math.PI:0)+(i<2?0:0.5);
+          L[i].rotation.x=Math.sin(ph)*0.42;
+          L[i].position.y=(L[i].userData.baseY!==undefined?L[i].userData.baseY:(L[i].userData.baseY=L[i].position.y))
+                          +Math.max(0,Math.cos(ph))*0.9;
+        }
+        bob=Math.sin(u.stride*2)*0.5;
+      }
+      ship.position.y=lerp(ship.position.y, ground+clr+bob, 1-Math.pow(0.0006,dt));
     } else {
       if(ship.position.y<ground+clr){ ship.position.y=ground+clr; u.speed*=0.9; }
       if(ship.position.y>430) ship.position.y=430;
@@ -2751,7 +2764,8 @@ function updatePlayerModel(dt,t){
 // ---------- Kamera / Atmosphäre ---------------------------------------
 const camTarget=new THREE.Vector3();
 function updateCamera(dt){
-  const head=player.pos.clone().add(new THREE.Vector3(0,2,0));
+  const camLift=(player.inShip&&player.inShip.userData.camY)||0;
+  const head=player.pos.clone().add(new THREE.Vector3(0,2+camLift,0));
   const dir=new THREE.Vector3(Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),Math.cos(player.yaw)*Math.cos(player.pitch));
   let dist=camDist;
   for(let sp=1.6;sp<=dist;sp+=0.5){
@@ -2882,7 +2896,7 @@ function vehicleMarkers(){
     if(!owned[k]) continue;
     out.push({x:sh.position.x,z:sh.position.z,
               col:k==='falcon'?'#8ff0ff':(k==='freighter'?'#c9b28f':'#cfe6ff'),
-              name:({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Eisfrachter'})[k]});
+              name:({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'})[k]});
   }
   if(speeder&&owned['speeder']) out.push({x:speeder.position.x,z:speeder.position.z,col:'#ff8a4c',name:'Gleiter'});
   for(const v of vehicles) if(v.type==='sd'&&v.hp>0)
@@ -2969,7 +2983,7 @@ function updateHint(){
       : '<b>[F]</b> landen · <b>Leertaste/C</b> Höhe · <b>Linksklick</b> Laser';
   else if(nearestShip()&&!player.inSpeeder){
     const sh=nearestShip(), k=sh.userData.kind||'ship';
-    const NM={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Eisfrachter'};
+    const NM={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'};
     const PR={ship:1000,falcon:10000,freighter:2500};
     txt=owned[k] ? '<b>[F]</b> '+NM[k]+' besteigen'
                  : NM[k]+' verschlossen — <b>'+PR[k]+'</b> Münzen im Schwarzmarkt <b>[X]</b>';
