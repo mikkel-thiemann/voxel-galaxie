@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 22 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 23 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1389,6 +1389,18 @@ function makeFalcon(){
   function solidAtF(x,y,z){
     const r=Math.hypot(x,z), t=halfT(r);
     const a=Math.atan2(z,x), seg=((a+Math.PI)/(Math.PI*2)*16)%1;
+    // Triebwerksband: folgt der hinteren Rundung des Rumpfes (wie auf dem Foto)
+    const rearAng=Math.atan2(z,-x);                     // 0 = genau hinten
+    if(Math.abs(rearAng)<1.22){
+      // heller Kern liegt aussen und ist dadurch von hinten voll sichtbar
+      if(Math.abs(y)<=0.50 && r>9.45 && r<11.05){
+        if(((rearAng*12)%1+1)%1<0.09) return DARK;       // feine Stege im Band
+        return GLOW;
+      }
+      // dunkle Fassung ober- und unterhalb des Bandes
+      if(Math.abs(y)>0.50 && Math.abs(y)<=1.15 && r>9.25 && r<10.85) return DARK;
+    }
+
     // Untertasse
     if(t>0 && Math.abs(y)<=t){
       if(r>2.6 && r<10.2){
@@ -1433,13 +1445,6 @@ function makeFalcon(){
       if(Math.abs(y)>halfT(Math.hypot(x,z))-0.2 && dx*dx+dy*dy+dz*dz < 3.05) return DARK;
       if(Math.abs(z-1.9)<0.3 && Math.abs(x-1.2)<0.55 && Math.abs(y-sy*3.1)<0.3) return DARK;
     }
-    // Triebwerksgitter: helle Schlitze zwischen dunklen Stäben
-    if(x<=-9.5 && x>=-11.2 && Math.abs(z)<=6.2 && Math.abs(y)<=1.05){
-      const bar=Math.floor((z+6.2)/0.55)%2===0;
-      if(x<-10.4) return bar?GLOW:DARK;
-      return DARK;
-    }
-    if(x<=-9.0 && x>=-10.2 && Math.abs(Math.abs(z)-7.2)<0.9 && Math.abs(y)<=0.85) return DARK;
     return 0;
   }
 
