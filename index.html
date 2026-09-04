@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 20 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 21 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1359,142 +1359,150 @@ function makeXwingShip(col){
   g.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
   return g;
 }
-// Kleiner Bauhelfer: sammelt Quader in einem einzigen Netz (schnell trotz vieler Teile)
-function fbBox(P,N,C,cx,cy,cz,sx,sy,sz,col){
-  const hx=sx/2, hy=sy/2, hz=sz/2;
-  const r=((col>>16)&255)/255, g=((col>>8)&255)/255, b=(col&255)/255;
-  const F=[
-    {n:[0,1,0], v:[[-hx,hy,-hz],[-hx,hy,hz],[hx,hy,hz],[hx,hy,-hz]], s:1.00},
-    {n:[0,-1,0],v:[[-hx,-hy,hz],[-hx,-hy,-hz],[hx,-hy,-hz],[hx,-hy,hz]], s:0.45},
-    {n:[0,0,1], v:[[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]], s:0.82},
-    {n:[0,0,-1],v:[[hx,-hy,-hz],[-hx,-hy,-hz],[-hx,hy,-hz],[hx,hy,-hz]], s:0.66},
-    {n:[1,0,0], v:[[hx,-hy,hz],[hx,-hy,-hz],[hx,hy,-hz],[hx,hy,hz]], s:0.90},
-    {n:[-1,0,0],v:[[-hx,-hy,-hz],[-hx,-hy,hz],[-hx,hy,hz],[-hx,hy,-hz]], s:0.60}
-  ];
-  const o=[0,1,2,0,2,3];
-  for(let f=0;f<6;f++){
-    const F2=F[f];
-    for(let k=0;k<6;k++){
-      const i=o[k];
-      P.push(cx+F2.v[i][0], cy+F2.v[i][1], cz+F2.v[i][2]);
-      N.push(F2.n[0],F2.n[1],F2.n[2]);
-      C.push(r*F2.s, g*F2.s, b*F2.s);
-    }
-  }
-}
+// ---------- Millennium Falke als feine Voxel-Skulptur ----------
+// Der Rumpf wird in einem 0,55er-Raster ausmodelliert; gezeichnet werden nur
+// die Flächen, die wirklich sichtbar sind. So bleibt die Form fein und die
+// Dreieckszahl trotzdem im Rahmen.
 function makeFalcon(){
-  const g=new THREE.Group();
+  const STEP=0.55;
+  const X0=-12.2, X1=18.4, Y0=-4.6, Y1=5.4, Z0=-12.2, Z1=12.2;
+  const NX=Math.round((X1-X0)/STEP)+1, NY=Math.round((Y1-Y0)/STEP)+1, NZ=Math.round((Z1-Z0)/STEP)+1;
+  const cell=new Uint8Array(NX*NY*NZ);                 // 0 leer, 1 Hülle, 2 dunkel, 3 Leuchtfläche
+  const idx=(i,j,k)=>(i*NY+j)*NZ+k;
+  const HULL=1, DARK=2, GLOW=3;
+
+  const halfT=r=>{                                     // Dicke der Untertasse
+    if(r<=2.9) return 2.85;
+    if(r<=5.9) return 2.25;
+    if(r<=8.5) return 1.70;
+    if(r<=10.3) return 0.95;
+    return -1;
+  };
+  const segDist=(x,y,z,ax,ay,az,bx,by,bz)=>{           // Abstand zu einer Strecke
+    const dx=bx-ax, dy=by-ay, dz=bz-az;
+    let t=((x-ax)*dx+(y-ay)*dy+(z-az)*dz)/(dx*dx+dy*dy+dz*dz);
+    t=t<0?0:(t>1?1:t);
+    const qx=ax+dx*t-x, qy=ay+dy*t-y, qz=az+dz*t-z;
+    return Math.sqrt(qx*qx+qy*qy+qz*qz);
+  };
+
+  function solidAtF(x,y,z){
+    const r=Math.hypot(x,z), t=halfT(r);
+    // Untertasse mit aufgesetzten Platten
+    if(t>0 && Math.abs(y)<=t){
+      if(r>2.6 && r<10.2){
+        const a=Math.atan2(z,x);
+        if(Math.abs(r-6.05)<0.30||Math.abs(r-8.65)<0.28) return DARK;    // Ringfugen
+        if(((a+Math.PI)/(Math.PI*2)*18)%1<0.13) return DARK;             // Strahlenfugen
+      }
+      return HULL;
+    }
+    // aufgesetzte Maschinerie oben und unten
+    if(t>0 && Math.abs(y)<=t+0.62 && r>1.6 && r<9.9){
+      const h=hash2(Math.floor(x*1.7)+41, Math.floor(z*1.7)+17);
+      if(h>0.62) return (h>0.86)?DARK:HULL;
+    }
+    // Frachtklauen mit Spalt
+    if(x>=10.0 && x<=17.4 && Math.abs(z)>=1.75 && Math.abs(z)<=5.15 && Math.abs(y)<=1.05){
+      if(x>15.6) return DARK;
+      if(Math.abs(z)<2.1||Math.abs(z)>4.9) return DARK;
+      return HULL;
+    }
+    // Ladebucht zwischen den Klauen
+    if(x>=9.8 && x<=13.4 && Math.abs(z)<1.7 && Math.abs(y)<=0.85) return DARK;
+    // Cockpit-Röhre und Kanzel
+    if(segDist(x,y,z, 3.4,-0.2,-6.6, 8.6,-0.2,-9.5) < 1.15) return HULL;
+    if(x>=8.4&&x<=10.9 && Math.abs(y+0.15)<=1.0 && z>=-10.8&&z<=-8.2){
+      if(x>10.35) return GLOW;                                            // Sichtfenster
+      return HULL;
+    }
+    // Geschützkuppeln oben und unten
+    for(const sy of[1,-1]){
+      const dx=x-1.2, dy=y-sy*2.55, dz=z;
+      if(Math.abs(y)>halfT(Math.hypot(x,z))-0.2 && dx*dx+dy*dy+dz*dz < 3.05) return DARK;
+      if(Math.abs(z-1.9)<0.3 && Math.abs(x-1.2)<0.55 && Math.abs(y-sy*3.1)<0.3) return DARK;
+    }
+    // Triebwerksschlitz
+    if(x<=-9.6 && x>=-11.1 && Math.abs(z)<=5.6 && Math.abs(y)<=0.95) return (x<-10.5)?GLOW:DARK;
+    if(x<=-9.2 && x>=-10.2 && Math.abs(Math.abs(z)-6.7)<0.9 && Math.abs(y)<=0.8) return GLOW;
+    return 0;
+  }
+
+  for(let i=0;i<NX;i++){
+    const x=X0+i*STEP;
+    for(let j=0;j<NY;j++){
+      const y=Y0+j*STEP;
+      for(let k=0;k<NZ;k++){
+        const z=Z0+k*STEP;
+        cell[idx(i,j,k)]=solidAtF(x,y,z);
+      }
+    }
+  }
+
+  // ---- nur sichtbare Flächen erzeugen ----
   const P=[],N=[],C=[],GP=[],GN=[],GC=[];
-  const B =(x,y,z,w,h,d,c)=>fbBox(P,N,C,x,y,z,w,h,d,c);
-  const BG=(x,y,z,w,h,d,c)=>fbBox(GP,GN,GC,x,y,z,w,h,d,c);
-  const jit=(x,z,base,amt)=>shade(base,(hash2(x*3.7+11,z*2.9+5)-0.5)*amt);
-
-  const HULL=0xb5b3ac, HULL2=0xa3a199, DARK=0x86847e, DEEP=0x5f5e59, LINE=0x4c4b47;
-
-  // ---------- Untertasse als runder Voxelkörper ----------
-  for(let x=-11;x<=11;x++)for(let z=-11;z<=11;z++){
-    const r=Math.hypot(x,z);
-    if(r>10.4) continue;
-    let h;
-    if(r<=3.0) h=5.8; else if(r<=6.0) h=4.6; else if(r<=8.6) h=3.4; else h=1.9;
-    let col=jit(x,z,HULL,0.10);
-    const ang=(Math.atan2(z,x)+Math.PI)/(Math.PI*2);
-    if(r>9.5) col=jit(x,z,HULL2,0.05);                                          // glatter Randring
-    else if(Math.abs(r-6.1)<0.55||Math.abs(r-8.7)<0.5) col=jit(x,z,LINE,0.05);  // Ringfugen
-    else if((ang*16)%1<0.10 && r>3.2) col=jit(x,z,DARK,0.06);                  // Strahlenfugen
-    else if(r<=3.0) col=jit(x,z,HULL2,0.08);
-    B(x,0,z,1.02,h,1.02,col);
-  }
-  // Aufbauten und Maschinerie oben und unten
-  for(let i=0;i<46;i++){
-    const a=hash2(i*7.3,i*3.1)*Math.PI*2, r=1.5+hash2(i*2.1,i*5.7)*6.8;
-    const x=Math.cos(a)*r, z=Math.sin(a)*r, rr2=Math.hypot(x,z);
-    const top=(rr2<=3.0?5.8:rr2<=6.0?4.6:rr2<=8.6?3.4:1.9)/2;
-    const w=0.8+hash2(i*4.4,i)*1.9, d=0.8+hash2(i,i*4.4)*1.9, hh=0.22+hash2(i*9,i*2)*0.35;
-    const up=(i%3!==2);
-    B(x, up?(top+hh/2):(-top-hh/2), z, w, hh, d, jit(x*i,z, i%2?HULL2:DARK, 0.12));
-  }
-  // Zentrale Kuppelaufbauten
-  for(let ring=0;ring<2;ring++){
-    const rr2=2.7-ring*0.9, y=2.95+ring*0.45;
-    for(let a=0;a<Math.round(rr2*8);a++){
-      const an=a/Math.round(rr2*8)*Math.PI*2;
-      B(Math.cos(an)*rr2, y, Math.sin(an)*rr2, 0.95,0.55,0.95, jit(a,ring,HULL2,0.10));
-      B(Math.cos(an)*rr2,-y, Math.sin(an)*rr2, 0.95,0.55,0.95, jit(a,ring,DARK,0.10));
+  const SH=[1.0,0.45,0.82,0.66,0.90,0.60];
+  const DIR=[[0,1,0],[0,-1,0],[0,0,1],[0,0,-1],[1,0,0],[-1,0,0]];
+  const h2=STEP/2;
+  const quad=(P,N,C,cx,cy,cz,f,r,g,b)=>{
+    const d=DIR[f], sh=SH[f];
+    let v;
+    if(f===0) v=[[-h2,h2,-h2],[-h2,h2,h2],[h2,h2,h2],[h2,h2,-h2]];
+    else if(f===1) v=[[-h2,-h2,h2],[-h2,-h2,-h2],[h2,-h2,-h2],[h2,-h2,h2]];
+    else if(f===2) v=[[-h2,-h2,h2],[h2,-h2,h2],[h2,h2,h2],[-h2,h2,h2]];
+    else if(f===3) v=[[h2,-h2,-h2],[-h2,-h2,-h2],[-h2,h2,-h2],[h2,h2,-h2]];
+    else if(f===4) v=[[h2,-h2,h2],[h2,-h2,-h2],[h2,h2,-h2],[h2,h2,h2]];
+    else v=[[-h2,-h2,-h2],[-h2,-h2,h2],[-h2,h2,h2],[-h2,h2,-h2]];
+    const o=[0,1,2,0,2,3];
+    for(let q=0;q<6;q++){
+      const t=v[o[q]];
+      P.push(cx+t[0],cy+t[1],cz+t[2]);
+      N.push(d[0],d[1],d[2]);
+      C.push(r*sh,g*sh,b*sh);
+    }
+  };
+  const BASE=[0xb8b6af,0xaca9a2,0xc0beb6,0xa4a29b];
+  let faces=0;
+  for(let i=0;i<NX;i++)for(let j=0;j<NY;j++)for(let k=0;k<NZ;k++){
+    const m=cell[idx(i,j,k)]; if(!m) continue;
+    const x=X0+i*STEP, y=Y0+j*STEP, z=Z0+k*STEP;
+    let col;
+    if(m===GLOW) col=0x9fe2ff;
+    else if(m===DARK) col=shade(0x74726c,(hash2(i*3+7,k*5+3)-0.5)*0.14);
+    else col=shade(BASE[(i+k+j)&3],(hash2(i*7+1,k*3+j)-0.5)*0.13);
+    const r=((col>>16)&255)/255, g=((col>>8)&255)/255, b=(col&255)/255;
+    for(let f=0;f<6;f++){
+      const d=DIR[f], ni=i+d[0], nj=j+d[1], nk=k+d[2];
+      const empty=(ni<0||nj<0||nk<0||ni>=NX||nj>=NY||nk>=NZ)||!cell[idx(ni,nj,nk)];
+      if(!empty) continue;
+      if(m===GLOW) quad(GP,GN,GC,x,y,z,f,r,g,b); else quad(P,N,C,x,y,z,f,r,g,b);
+      faces++;
     }
   }
 
-  // ---------- Frachtklauen ----------
-  for(const sz of[-1,1]){
-    for(let i=0;i<7;i++){
-      const x=10.6+i, len=(i<5)?3.4:2.6;
-      for(let j=0;j<Math.round(len);j++){
-        const z=sz*(1.9+j);
-        B(x,0,z,1.02,(i<5)?2.1:1.6,1.02, jit(x,z,(j===0)?DEEP:HULL,0.10));
-        if(i<5) B(x,1.15,z,1.0,0.35,1.0, jit(x+i,z,HULL2,0.08));      // Deckplatte
-      }
-    }
-    B(16.9,0,sz*3.3,1.1,1.3,3.2,DEEP);                                 // Klauenspitze
-  }
-  for(let i=0;i<5;i++) B(10.2+i,0,0,1.0,1.4,3.0, jit(i,0,DEEP,0.08));  // Ladebucht im Spalt
-
-  // ---------- Cockpit rechts hinten ----------
-  for(let i=0;i<5;i++) B(4.0+i,-0.2,-8.2-i*0.28,1.05,1.5,2.0, jit(i,7,HULL2,0.10));
-  B(8.9,-0.1,-9.5,2.2,1.9,2.6, HULL);
-  B(9.9,0.0,-9.5,0.5,1.0,2.0, 0x2d3a44);
-  BG(10.15,0.0,-9.5,0.18,0.8,1.7, 0x9fd8ff);                            // Kanzelscheibe
-  B(8.6,1.1,-9.5,1.4,0.35,0.5, DARK);
-
-  // ---------- Geschützkuppeln ----------
-  for(const sy of[1,-1]){
-    for(let ring=0;ring<3;ring++){
-      const rr2=1.7-ring*0.45, y=sy*(2.4+ring*0.42);
-      for(let a=0;a<Math.round(rr2*9);a++){
-        const an=a/Math.round(rr2*9)*Math.PI*2;
-        B(1.2+Math.cos(an)*rr2, y, Math.sin(an)*rr2, 0.7,0.45,0.7, (ring===2)?DEEP:DARK);
-      }
-    }
-    for(const sd of[-1,1]) B(1.2+sd*0.4, sy*3.1, 1.4, 0.26,0.26,2.6, 0x45494f);
-  }
-
-  // ---------- Triebwerksschlitz ----------
-  for(let i=-5;i<=5;i++){
-    B(-10.2,0,i*1.02,1.5,2.4,1.02, jit(i,3,DEEP,0.08));
-    BG(-11.05,0,i*1.02,0.35,0.75,0.95, 0x8fd8ff);
-  }
-  for(const sz of[-1,1]) for(let i=0;i<3;i++){
-    B(-9.6+i*0.4,0,sz*(6.4+i*0.5),0.9,1.4,0.9, DEEP);
-    BG(-10.3+i*0.4,0,sz*(6.4+i*0.5),0.3,0.5,0.7, 0x8fd8ff);
-  }
-
-  // ---------- Andockringe ----------
-  for(const sz of[-1,1]) for(let a=0;a<10;a++){
-    const an=a/10*Math.PI*2;
-    B(-0.8+Math.cos(an)*1.3, Math.sin(an)*1.3, sz*9.8, 0.6,0.6,0.9, DARK);
-  }
-
-  // ---------- alles zu einem Netz verschmelzen ----------
+  const g=new THREE.Group();
   const mk=(pos,nor,col,material)=>{
     const gm=new THREE.BufferGeometry();
     gm.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
     gm.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
     gm.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
-    const m=new THREE.Mesh(gm,material); m.castShadow=true; return m;
+    const me=new THREE.Mesh(gm,material); me.castShadow=true; return me;
   };
   g.add(mk(P,N,C,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true})));
-  g.add(mk(GP,GN,GC,new THREE.MeshBasicMaterial({vertexColors:true})));
+  if(GP.length) g.add(mk(GP,GN,GC,new THREE.MeshBasicMaterial({vertexColors:true})));
+  g.userData.faceCount=faces;
 
-  // ---------- Radarschüssel (gedreht, daher eigenes Teil) ----------
-  const mast=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.9,0.35),
-    new THREE.MeshLambertMaterial({color:DARK})); mast.position.set(-2.8,3.2,4.3); g.add(mast);
+  // Radarschüssel (gedreht, daher als eigenes Teil)
   const dish=new THREE.Group();
-  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
-    const d=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.22,0.75),
-      new THREE.MeshLambertMaterial({color:(i+j)%2?0xd2cec4:0xbfbbb2,flatShading:true}));
-    d.position.set(i*1.0,0,j*0.75); dish.add(d);
+  for(let i=-2;i<=2;i++)for(let j=-1;j<=1;j++){
+    if(Math.abs(i)===2&&Math.abs(j)===1) continue;
+    const d=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.18,0.62),
+      new THREE.MeshLambertMaterial({color:(i+j)%2?0xd2cec4:0xbdb9b0,flatShading:true}));
+    d.position.set(i*0.6,0,j*0.6); d.castShadow=true; dish.add(d);
   }
-  dish.position.set(-2.8,3.9,4.6); dish.rotation.z=0.22; dish.rotation.x=-0.42; g.add(dish);
-  dish.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
+  const mast=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.9,0.3),
+    new THREE.MeshLambertMaterial({color:0x74726c})); mast.position.set(-2.8,3.1,4.2); g.add(mast);
+  dish.position.set(-2.8,3.75,4.5); dish.rotation.z=0.24; dish.rotation.x=-0.45; g.add(dish);
   return g;
 }
 function noFog(o){ o.traverse(m=>{ if(m.material) m.material.fog=false; }); }
