@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 23 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 24 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1333,13 +1333,15 @@ function makeXwingShip(col){
     new THREE.MeshLambertMaterial({color:0x2d3a44,transparent:true,opacity:.75})); canopy.position.set(1.6,2.1,0); g.add(canopy);
   // Astromech hinter dem Cockpit
   const dome=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.9,1.2),mat(0xdcdcdc)); dome.position.set(-0.9,1.9,0); g.add(dome);
-  const eye=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,0.1),new THREE.MeshBasicMaterial({color:0x2f6fb5}));
-  eye.position.set(-0.35,2.0,0.6); g.add(eye);
+  for(const sz of[-1,1]){
+    const eye=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,0.1),new THREE.MeshBasicMaterial({color:0x2f6fb5}));
+    eye.position.set(-0.35,2.0,sz*0.6); g.add(eye);
+  }
   // vier Flügel im X, jeweils mit Triebwerk und Kanone
   for(const sy of[1,-1])for(const sz of[1,-1]){
     const wing=new THREE.Mesh(new THREE.BoxGeometry(7.5,0.45,3.4),mat(white));
     wing.position.set(-4.6, sy*1.5, sz*3.2);
-    wing.rotation.x=sy*sz*0.22; wing.rotation.z=sy*0.10; g.add(wing);
+    wing.rotation.x=sy*sz*0.22; g.add(wing);
     for(let k=0;k<2;k++){
       const band=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,3.0),mat(red));
       band.position.set(-6.4+k*1.6, sy*1.6, sz*3.2); band.rotation.x=sy*sz*0.22; g.add(band);
@@ -1352,9 +1354,9 @@ function makeXwingShip(col){
     fl.position.set(-7.4, sy*1.5, sz*2.0); g.add(fl);
     // Laserkanone an der Flügelspitze
     const gun=new THREE.Mesh(new THREE.BoxGeometry(6,0.32,0.32),mat(dark));
-    gun.position.set(-3.6, sy*1.5+sy*sz*0.75, sz*4.7); g.add(gun);
+    gun.position.set(-3.6, sy*0.78, sz*4.7); g.add(gun);
     const tip=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.42,0.42),new THREE.MeshBasicMaterial({color:0xff3b30}));
-    tip.position.set(-0.6, sy*1.5+sy*sz*0.75, sz*4.7); g.add(tip);
+    tip.position.set(-0.6, sy*0.78, sz*4.7); g.add(tip);
   }
   g.traverse(function(o){ if(o.isMesh) o.castShadow=true; });
   return g;
