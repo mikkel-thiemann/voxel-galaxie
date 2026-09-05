@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 24 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 25 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -237,7 +237,7 @@
 // ======================================================================
 //  VOXEL WARS · gestreamte Voxel-Galaxie, 1800 x 1800 Blöcke
 // ======================================================================
-const CS=32, WR=1600;
+const CS=32, WR=2000;
 const BIOME_NAMES=['TATOOINE','HOTH','ENDOR','MUSTAFAR'];
 let VIEW=7;
 
@@ -865,6 +865,149 @@ const L_MINE=addLandmark({name:'Lava-Mine',x:1220,z:440,r:90,flatR:48,build(){
   landingPad(c.x-36,c.z+30,10,0x2b2228,0xff2f14);
 }});
 
+// ---------- weitere Anlagen ----------
+const L_CRAWLER=addLandmark({name:'Sandkriecher',x:-1420,z:-980,r:80,flatR:40,build(){
+  const c=this, rust=0x8a6a3f, dark=0x5b4326;
+  const b=flatten(c.x,c.z,36,0xd0b382)+1;
+  fillBox(c.x-20,b+6,c.z-11,42,16,23,rust,false,0.12);            // Rumpf
+  fillBox(c.x-22,b+2,c.z-13,46,5,27,dark,false,0.10);             // Laufwerk
+  for(let i=0;i<10;i++){                                           // Kettenglieder
+    fillBox(c.x-20+i*4,b,c.z-14,3,3,3,0x4a3521);
+    fillBox(c.x-20+i*4,b,c.z+12,3,3,3,0x4a3521);
+  }
+  fillBox(c.x+16,b+18,c.z-6,7,7,13,shade(rust,0.06),false,0.08);   // Aufbau vorn
+  for(let i=0;i<6;i++) putBlock(c.x+23,b+20+i%3,c.z-4+i*2,0xffc766,true);
+  for(let i=0;i<9;i++) putBlock(c.x-20+i*5,b+22,c.z+ri(-9,9),0x3b3f47);
+  // Ladeluke mit Rampe
+  for(let i=0;i<7;i++) fillBox(c.x-21-i,b+5-Math.floor(i*0.7),c.z-4,1,1,9,dark);
+  for(let i=0;i<7;i++) lampPost(c.x+ri(-30,30),c.z+ri(-26,26));
+  for(let i=0;i<5;i++) stall(c.x+ri(-26,26),c.z+ri(16,30),0xc9772f);
+}});
+
+const L_ARENA=addLandmark({name:'Podrennen-Arena',x:-1050,z:-1520,r:120,flatR:78,build(){
+  const c=this, sand=0xd0b382, stone=0xc4a878;
+  const b=flatten(c.x,c.z,70,sand)+1;
+  for(let ring=0;ring<2;ring++){                                    // ovale Tribünenmauer
+    const rx=54+ring*8, rz=38+ring*6;
+    for(let a=0;a<260;a++){
+      const an=a/260*Math.PI*2;
+      const x=Math.round(c.x+Math.cos(an)*rx), z=Math.round(c.z+Math.sin(an)*rz);
+      for(let y=0;y<6+ring*3;y++) putBlock(x,b+y,z,shade(stone,(hash2(x+y,z)-0.5)*0.10));
+    }
+  }
+  for(let i=0;i<12;i++){                                            // Sitzreihen und Fahnen
+    const an=i/12*Math.PI*2;
+    const x=Math.round(c.x+Math.cos(an)*48), z=Math.round(c.z+Math.sin(an)*33);
+    for(let s2=0;s2<4;s2++) fillBox(x,b+2+s2,z,3,1,3,shade(stone,-0.05*s2));
+    if(i%3===0) banner(x,z,8,[0xa33c3c,0x3c6ea3,0xc9a13a][i%3]);
+  }
+  archGate(c.x,c.z-38,6,10,stone,false);                            // Startbogen
+  archGate(c.x,c.z+38,6,10,stone,false);
+  for(let i=0;i<10;i++) lampPost(c.x+ri(-46,46),c.z+ri(-30,30));
+  landingPad(c.x+64,c.z,10,0xb9a37c,0xffc766);
+}});
+
+const L_STARWRECK=addLandmark({name:'Abgestürzter Zerstörer',x:1520,z:-1180,r:130,flatR:0,build(){
+  const c=this, hull=0x7f8792, dark=0x555c65;
+  // gewaltiger Keil, schraeg im Eis steckend
+  const base=gy(c.x,c.z)+1;
+  for(let i=0;i<130;i++){
+    const w=Math.round(44-i*0.31);
+    const x=c.x-62+i;
+    const lift=Math.round(i*0.17);                  // Bug hebt sich aus dem Schnee
+    for(let dz=-w;dz<=w;dz++)for(let dy=0;dy<9;dy++){
+      const y=base+lift+dy;
+      const edge=(Math.abs(dz)>w-2||dy===0||dy===8);
+      putBlock(x,y,c.z+dz, edge?dark:shade(hull,(hash2(x+dy,c.z+dz)-0.5)*0.10));
+    }
+    if(i%14===0) for(let dz=-w+3;dz<=w-3;dz+=9) putBlock(x,base+lift+9,c.z+dz,dark);
+  }
+  const tb=base+Math.round(129*0.17)+9;
+  fillBox(c.x+46,tb,c.z-8,13,10,17,dark,false,0.08);   // Kommandoturm
+  fillBox(c.x+50,tb+10,c.z-5,9,4,11,shade(dark,0.08),false,0.08);
+  for(let i=0;i<10;i++) putBlock(c.x+50+i%4,tb+14,c.z-6+i*2,0xff3b30,true);
+  for(let i=0;i<26;i++){                                            // Trümmer und Feuer
+    const x=c.x+ri(-80,80), z=c.z+ri(-70,70);
+    fillBox(x,gy(x,z)+1,z,ri(2,5),ri(1,4),ri(2,5),pick([0x8a9099,0x6d757e],x,z),false,0.12);
+    if(i%5===0) putBlock(x,gy(x,z)+2,z,0xff6a2a,true);
+  }
+  landingPad(c.x-84,c.z+30,11,0xc3d3e2,0x9be7ff);
+}});
+
+const L_TEMPLE=addLandmark({name:'Jedi-Tempelruine',x:-1460,z:1520,r:110,flatR:56,build(){
+  const c=this, stone=0xa8a396, moss=0x6f8a55;
+  const b=flatten(c.x,c.z,44,stone)+1;
+  for(let lvl=0;lvl<5;lvl++){                                       // Stufenpyramide
+    const r=34-lvl*6;
+    for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){
+      if(Math.max(Math.abs(x),Math.abs(z))<r-1) continue;
+      for(let y=0;y<4;y++) putBlock(c.x+x,b+lvl*4+y,c.z+z,
+        (hash2(c.x+x,c.z+z+y)>0.82)?moss:shade(stone,(hash2(x+y,z)-0.5)*0.10));
+    }
+  }
+  for(let i=0;i<12;i++){                                            // Säulenkranz
+    const an=i/12*Math.PI*2, x=Math.round(c.x+Math.cos(an)*40), z=Math.round(c.z+Math.sin(an)*40);
+    const hgt=(i%3===0)?ri(6,10):ri(11,16);                         // teils eingestürzt
+    for(let y=0;y<hgt;y++) fillBox(x,gy(x,z)+1+y,z,2,1,2,shade(stone,(hash2(x,z+y)-0.5)*0.10));
+    if(hgt>10) fillBox(x-1,gy(x,z)+1+hgt,z-1,4,1,4,stone);
+  }
+  for(let y=0;y<5;y++) fillBox(c.x-2,b+20+y,c.z-2,5,1,5, y===4?0x9be7ff:stone, y===4);  // Altar
+  for(let i=0;i<30;i++){ const x=c.x+ri(-60,60), z=c.z+ri(-60,60); bigTree(x,z,ri(16,26),ri(5,8)); }
+  for(let i=0;i<14;i++) lampPost(c.x+ri(-40,40),c.z+ri(-40,40));
+}});
+
+const L_HIDEOUT=addLandmark({name:'Rebellen-Waldposten',x:-1000,z:1260,r:80,flatR:44,build(){
+  const c=this, b=flatten(c.x,c.z,30,0x6b7f5a)+1, wall=0x7e8a72;
+  fillBox(c.x-12,b,c.z-9,25,7,19,wall,false,0.10);                  // Bunker
+  fillBox(c.x-10,b+1,c.z-7,21,5,15,0x2a2f26);
+  for(let i=0;i<5;i++) putBlock(c.x-8+i*4,b+7,c.z-9,0xffc766,true);
+  crenelWall(c.x-26,c.z-22,c.x+26,c.z-22,6,wall);
+  crenelWall(c.x-26,c.z+22,c.x+26,c.z+22,6,wall);
+  archGate(c.x,c.z-22,4,7,wall,false);
+  tower(c.x+22,c.z+14,4,20,wall,0xffc766,3);                        // Funkturm
+  landingPad(c.x-24,c.z+16,10,0x8a9a7c,0x9be7ff);
+  for(let i=0;i<3;i++) xwing(c.x-30+i*12,c.z+30,i%2?0xd6753a:0xc8c2b4);
+  for(let i=0;i<20;i++) bigTree(c.x+ri(-60,60),c.z+ri(-60,60),ri(14,24),ri(4,7));
+  banner(c.x+6,c.z-20,7,0xd6753a);
+}});
+
+const L_FOUNDRY=addLandmark({name:'Lava-Schmelzwerk',x:1480,z:1280,r:110,flatR:58,build(){
+  const c=this, b=flatten(c.x,c.z,44,0x241d22)+1, dark=0x2b2228;
+  fillBox(c.x-22,b,c.z-18,45,1,37,dark,false,0.10);                 // Werksplatte
+  for(let i=0;i<4;i++) tower(c.x-14+i*10,c.z-10,3,ri(22,34),dark,0xff2f14,3);   // Schlote
+  fillBox(c.x-8,b+1,c.z+6,17,8,13,shade(dark,0.05),false,0.10);     // Halle
+  for(let i=0;i<6;i++) putBlock(c.x-6+i*3,b+9,c.z+6,0xff5f14,true);
+  for(let i=0;i<3;i++){                                             // Schmelzbecken
+    const x=c.x-16+i*16, z=c.z+22;
+    for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){
+      const d=Math.hypot(dx,dz); if(d>4) continue;
+      putBlock(x+dx,b+1,z+dz, d>3.1?dark:0xff5f14, d<=3.1);
+    }
+  }
+  lavaBridge(c.x-60,c.z,c.x-22,c.z,b);                              // Zufahrt
+  for(let i=0;i<12;i++){ const x=c.x+ri(-50,50), z=c.z+ri(-40,40);
+    for(let y=0;y<ri(4,12);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2); }
+  banner(c.x-18,c.z+2,10,0xff2f14);
+  landingPad(c.x+34,c.z-28,11,dark,0xff2f14);
+}});
+
+const L_RADAR=addLandmark({name:'Eis-Radarstation',x:980,z:-1540,r:80,flatR:46,build(){
+  const c=this, ice=0xc9dced, b=flatten(c.x,c.z,30,0xd7e6f5)+1;
+  tower(c.x,c.z,5,26,ice,0x9be7ff,3);                               // Radarturm
+  for(let i=0;i<3;i++){                                             // Schüsselkranz
+    const an=i/3*Math.PI*2;
+    for(let dx=-3;dx<=3;dx++)for(let dz=-3;dz<=3;dz++)
+      if(Math.hypot(dx,dz)<=3) putBlock(Math.round(c.x+Math.cos(an)*8)+dx, b+27, Math.round(c.z+Math.sin(an)*8)+dz, 0xdfeaf4);
+  }
+  fillBox(c.x-14,b,c.z+10,29,5,13,ice,false,0.08);                  // Mannschaftsbunker
+  fillBox(c.x-12,b+1,c.z+12,25,3,9,0x0d1116);
+  trench(c.x-40,c.z-30,60,false);
+  for(let i=0;i<4;i++) snowSpeeder(c.x-18+i*12,c.z-16);
+  for(let i=0;i<6;i++) vaporator(c.x+ri(-34,34),c.z+ri(-30,30),ri(9,15));
+  banner(c.x-4,c.z+8,8,0xd6753a);
+  landingPad(c.x+30,c.z+22,10,0xc3d3e2,0x9be7ff);
+}});
+
 function ensureLandmarks(cx,cz){
   const x0=cx*CS, z0=cz*CS;
   for(const L of LAND){
@@ -884,19 +1027,57 @@ function propsForChunk(cx,cz){
     if(near) continue;
     const b=biomeAt(x,z), h=hash2(x*3+1,z*5+2);
     if(b===2){
-      if(h<0.72) bigTree(x,z,ri(14,28),ri(4,8));
-      else if(h<0.86){ const g=gy(x,z)+1; for(let k=0;k<ri(2,5);k++) putBlock(x,g+k,z,0x6b7f5a); }
+      if(h<0.66) bigTree(x,z,ri(14,28),ri(4,8));
+      else if(h<0.78){ const g=gy(x,z)+1; for(let k=0;k<ri(2,5);k++) putBlock(x,g+k,z,0x6b7f5a); }
+      else if(h<0.86){                                   // Waldhütte
+        const g=gy(x,z)+1;
+        for(let y=0;y<4;y++)for(let dx=-3;dx<=3;dx++)for(let dz=-3;dz<=3;dz++)
+          if(Math.abs(dx)===3||Math.abs(dz)===3) putBlock(x+dx,g+y,z+dz,0x6a4c2d);
+        roofPyramid(x,z,4,g+4,0x4d3a22);
+        putBlock(x,g+2,z+3,0xffc766,true);
+      }
+      else if(h<0.92){                                   // Steinruine im Wald
+        const g=gy(x,z)+1;
+        for(let k=0;k<5;k++) fillBox(x+ri(-6,6),g,z+ri(-6,6),2,ri(3,8),2,0xa8a396,false,0.10);
+      }
       else lampPost(x,z);
     } else if(b===0){
-      if(h<0.06) vaporator(x,z,ri(6,11));
+      if(h<0.03){                                        // kleines Wüstenlager
+        const bb=gy(x,z)+1;
+        for(let k=0;k<3;k++) stall(x+ri(-6,6),z+ri(-6,6),0xc9772f);
+        for(let k=0;k<4;k++) putBlock(x+ri(-5,5),bb,z+ri(-5,5),0x8b6b3f);
+        lampPost(x,z);
+      }
+      else if(h<0.07) vaporator(x,z,ri(6,11));
+      else if(h<0.10){                                   // Felsbogen
+        const bb=gy(x,z)+1;
+        for(let a2=0;a2<=8;a2++){
+          const an=a2/8*Math.PI, px=x+Math.round(Math.cos(an)*6), py=bb+Math.round(Math.sin(an)*7);
+          for(let t=-1;t<=1;t++) fillBox(px,py,z+t,2,2,1,pick(PAL.rock,px,z),false,0.12);
+        }
+      }
+      else if(h<0.13){                                   // Ruine
+        const bb=gy(x,z)+1;
+        for(let k=0;k<4;k++) fillBox(x+ri(-6,6),bb,z+ri(-6,6),ri(2,4),ri(2,6),ri(2,4),pick(PAL.rock,x,z),false,0.10);
+      }
       else if(h<0.42){ const g=gy(x,z)+1; fillBox(x,g,z,ri(1,3),ri(1,3),ri(1,3),pick(PAL.rock,x,z),false,0.12); }
       else if(h<0.58){ const g=gy(x,z)+1; for(let k=0;k<3;k++) putBlock(x,g+k,z,0x8a7a4a); putBlock(x,g+3,z,0x6f8a4a); }
     } else if(b===1){
-      if(h<0.30){ const g=gy(x,z)+1; for(let k=0;k<ri(2,6);k++) putBlock(x,g+k,z,0x9ecbe8); }
-      else if(h<0.34) vaporator(x,z,ri(7,12));
+      if(h<0.26){ const g=gy(x,z)+1; for(let k=0;k<ri(2,6);k++) putBlock(x,g+k,z,0x9ecbe8); }
+      else if(h<0.30) vaporator(x,z,ri(7,12));
+      else if(h<0.335){                                  // Wrackteil im Schnee
+        const g=gy(x,z)+1;
+        fillBox(x,g,z,ri(4,9),ri(1,3),ri(2,4),pick([0x8a9099,0x6d757e],x,z),false,0.12);
+        if(hash2(x,z)>0.6) putBlock(x+1,g+2,z,0xff3b30,true);
+      }
+      else if(h<0.355){ snowSpeeder(x,z); }              // abgestellter Snowspeeder
     } else {
-      if(h<0.40){ const g=gy(x,z)+1; for(let k=0;k<ri(2,7);k++) putBlock(x,g+k,z, k%3===2?0xff3a12:0x1d181c, k%3===2); }
-      else if(h<0.48){ const g=gy(x,z)+1; fillBox(x,g,z,2,ri(1,4),2,0x2f272a,false,0.1); }
+      if(h<0.36){ const g=gy(x,z)+1; for(let k=0;k<ri(2,7);k++) putBlock(x,g+k,z, k%3===2?0xff3a12:0x1d181c, k%3===2); }
+      else if(h<0.44){ const g=gy(x,z)+1; fillBox(x,g,z,2,ri(1,4),2,0x2f272a,false,0.1); }
+      else if(h<0.47){                                   // Bohrturm über der Lava
+        const g=gy(x,z)+1;
+        for(let k=0;k<ri(6,14);k++) fillBox(x,g+k,z,2,1,2, k%4===3?0xff2f14:0x241d22, k%4===3);
+      }
     }
   }
 }
