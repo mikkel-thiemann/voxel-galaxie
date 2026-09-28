@@ -223,7 +223,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 25 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 26 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -237,7 +237,7 @@
 // ======================================================================
 //  VOXEL WARS · gestreamte Voxel-Galaxie, 1800 x 1800 Blöcke
 // ======================================================================
-const CS=32, WR=2000;
+const CS=32, WR=2400;
 const BIOME_NAMES=['TATOOINE','HOTH','ENDOR','MUSTAFAR'];
 let VIEW=7;
 
@@ -512,7 +512,7 @@ function crashedFreighter(cx,cz){
 }
 function iceCave(cx,cz){
   const b=gy(cx,cz)+1;
-  const R=62, H=58, IR=56, IH=50;          // Aussen-/Innenmasse der Eiskuppel (doppelt)
+  const R=80, H=72, IR=73, IH=63;          // Aussen-/Innenmasse der Eiskuppel
   const ICE=[0x9ecbe8,0x8ab6d6,0xb9dcf2,0xa4c9e2];
   const mouthDir=-Math.PI/2;               // Mündung zeigt nach -z
   const mouthW=0.72;                       // halbe Öffnungsbreite im Bogenmass
@@ -525,14 +525,14 @@ function iceCave(cx,cz){
     const inMouth=Math.abs(rel)<mouthW;
     for(let y=0;y<=outH;y++){
       if(d<IR-0.5 && y<=inH) continue;                       // Halle bleibt hohl
-      if(inMouth && y<=34-Math.round(Math.abs(rel)/mouthW*13)) continue;  // Torbogen offen
+      if(inMouth && y<=44-Math.round(Math.abs(rel)/mouthW*17)) continue;  // Torbogen offen
       const gl=(hash2(cx+x*3,cz+z*5+y)>0.958);               // Kristalladern
       putBlock(cx+x,b+y,cz+z, gl?0x8fd6ff:pick(ICE,cx+x,cz+z+y), gl);
       if(y===outH) shell.push([x,z,y]);
     }
   }
   // Eiszapfen von der Hallendecke
-  for(let i=0;i<150;i++){
+  for(let i=0;i<230;i++){
     const a=rnd()*Math.PI*2, r=rr(2,IR-3);
     const x=Math.round(Math.cos(a)*r), z=Math.round(Math.sin(a)*r);
     const d=Math.hypot(x,z);
@@ -547,7 +547,7 @@ function iceCave(cx,cz){
   // Zapfen am oberen Rand der Mündung
   for(let a=-mouthW;a<=mouthW;a+=0.022){
     const x=Math.round(Math.cos(mouthDir+a)*(IR-1)), z=Math.round(Math.sin(mouthDir+a)*(IR-1));
-    const top=34-Math.round(Math.abs(a)/mouthW*13);
+    const top=44-Math.round(Math.abs(a)/mouthW*17);
     for(let y=0;y<ri(2,7);y++) putBlock(cx+x,b+top-y,cz+z, y===0?0xd8f0ff:0xb9dcf2, y===0);
   }
   // Hallenboden aus festem Eis
@@ -690,89 +690,106 @@ function tower(cx,cz,r,h,col,glowCol,step){      // Rundturm mit Zinnenkranz
   return b+h;
 }
 
-const L_TOWN=addLandmark({name:'Mos Voxel',x:-750,z:-700,r:150,flatR:96,build(){
+const L_TOWN=addLandmark({name:'Mos Voxel',x:-750,z:-700,r:205,flatR:130,build(){
   const c=this, sand=0xd6bb8c;
   // grosse Kuppelhäuser mit Nebenkuppeln
-  const houses=[[0,0,16,9],[38,20,12,7],[-34,26,13,8],[14,-40,11,7],[-44,-24,10,6],
-                [44,-16,9,6],[-14,52,10,6],[30,48,9,6],[-56,8,8,5]];
+  const houses=[[0,0,22,12],[52,27,17,10],[-46,35,18,11],[19,-54,15,9],[-60,-33,14,8],
+                [60,-22,13,8],[-19,70,14,8],[41,65,12,8],[-76,11,11,7],
+                [82,10,13,8],[-86,-56,12,7],[26,86,11,7],[-30,-74,12,8],[74,-58,11,7]];
   for(const h of houses){
     domeHouse(c.x+h[0],c.z+h[1],h[2],h[3],shade(sand,(hash2(h[0],h[1])-0.5)*0.10));
     if(h[2]>10) domeHouse(c.x+h[0]+h[2]+4,c.z+h[1]+3,Math.round(h[2]*0.45),4,shade(sand,-0.05));
   }
   // Stadttor und Mauerstücke
-  crenelWall(c.x-70,c.z-60,c.x+70,c.z-60,7,0xc4a878);
-  crenelWall(c.x-70,c.z-60,c.x-70,c.z+70,7,0xc4a878);
-  crenelWall(c.x+70,c.z-60,c.x+70,c.z+70,7,0xc4a878);
-  archGate(c.x,c.z-60,5,8,0xd6bb8c,false);
+  crenelWall(c.x-96,c.z-82,c.x+96,c.z-82,9,0xc4a878);
+  crenelWall(c.x-96,c.z-82,c.x-96,c.z+96,9,0xc4a878);
+  crenelWall(c.x+96,c.z-82,c.x+96,c.z+96,9,0xc4a878);
+  crenelWall(c.x-96,c.z+96,c.x+96,c.z+96,9,0xc4a878);
+  archGate(c.x,c.z-82,6,10,0xd6bb8c,false);
+  archGate(c.x,c.z+96,6,10,0xd6bb8c,false);
+  tower(c.x-96,c.z-82,6,26,0xc4a878,0xffc766,3);
+  tower(c.x+96,c.z-82,6,26,0xc4a878,0xffc766,3);
+  tower(c.x-96,c.z+96,6,26,0xc4a878,0xffc766,3);
+  tower(c.x+96,c.z+96,6,26,0xc4a878,0xffc766,3);
   // Marktstrasse: zwei Reihen mit Laternen
   const can=[0xb5453a,0xc9772f,0x4e7d63,0x9c3f5e,0xc9a13a,0x6b8fb5];
-  for(let i=0;i<20;i++) stall(c.x-46+(i%10)*11, c.z+(i<10?62:78), can[i%6]);
-  for(let i=0;i<12;i++) lampPost(c.x-48+(i%6)*20, c.z+(i<6?56:84));
-  banner(c.x-16,c.z+70,9,0xa33c3c); banner(c.x+22,c.z+70,9,0x3c6ea3);
+  for(let i=0;i<28;i++) stall(c.x-63+(i%14)*10, c.z+(i<14?82:104), can[i%6]);
+  for(let i=0;i<18;i++) lampPost(c.x-66+(i%9)*17, c.z+(i<9?74:112));
+  banner(c.x-22,c.z+93,11,0xa33c3c); banner(c.x+30,c.z+93,11,0x3c6ea3);
   // Zentraler Brunnen mit Denkmal
-  const b=flatten(c.x-4,c.z+28,9,sand)+1;
-  for(let a=0;a<40;a++){ const an=a/40*Math.PI*2;
-    putBlock(Math.round(c.x-4+Math.cos(an)*6),b,Math.round(c.z+28+Math.sin(an)*6),0xb59a6a); }
-  for(let y=0;y<9;y++) fillBox(c.x-5,b+y,c.z+27,3,1,3, y===8?0xffc766:0x8b7a56, y===8);
-  // Landeplattform
-  landingPad(c.x+62,c.z+56,11,0xb9a37c,0xffc766);
-  for(let i=0;i<14;i++) vaporator(c.x+ri(-70,70), c.z+ri(-55,90), ri(9,18));
+  const b=flatten(c.x-5,c.z+38,13,sand)+1;
+  for(let a=0;a<60;a++){ const an=a/60*Math.PI*2;
+    putBlock(Math.round(c.x-5+Math.cos(an)*9),b,Math.round(c.z+38+Math.sin(an)*9),0xb59a6a); }
+  for(let y=0;y<14;y++) fillBox(c.x-6,b+y,c.z+37,3,1,3, y===13?0xffc766:0x8b7a56, y===13);
+  // Landeplattformen
+  landingPad(c.x+84,c.z+76,15,0xb9a37c,0xffc766);
+  landingPad(c.x-84,c.z+50,12,0xb9a37c,0xffc766);
+  for(let i=0;i<22;i++) vaporator(c.x+ri(-94,94), c.z+ri(-76,120), ri(10,22));
 }});
 
-const L_OUTPOST=addLandmark({name:'Dünenposten',x:-1190,z:-330,r:75,flatR:44,build(){
+const L_OUTPOST=addLandmark({name:'Dünenposten',x:-1190,z:-330,r:100,flatR:58,build(){
   const c=this;
-  domeHouse(c.x,c.z,11,6,0xcbae7c);
-  domeHouse(c.x+22,c.z+14,7,5,0xd6bb8c);
-  crenelWall(c.x-26,c.z-24,c.x+26,c.z-24,6,0xbfa377);
-  archGate(c.x,c.z-24,4,7,0xcbae7c,false);
-  for(let i=0;i<8;i++) vaporator(c.x+ri(-34,34),c.z+ri(-30,34),ri(8,15));
-  for(let i=0;i<5;i++) stall(c.x+ri(-22,22),c.z+ri(6,30),0xc9772f);
-  landingPad(c.x-28,c.z+26,8,0xb9a37c,0xffc766);
+  domeHouse(c.x,c.z,15,8,0xcbae7c);
+  domeHouse(c.x+30,c.z+19,10,6,0xd6bb8c);
+  domeHouse(c.x-28,c.z+22,9,6,0xcbae7c);
+  tower(c.x+26,c.z-22,5,22,0xbfa377,0xffc766,3);
+  crenelWall(c.x-36,c.z-33,c.x+36,c.z-33,7,0xbfa377);
+  crenelWall(c.x-36,c.z-33,c.x-36,c.z+36,7,0xbfa377);
+  archGate(c.x,c.z-33,5,8,0xcbae7c,false);
+  for(let i=0;i<13;i++) vaporator(c.x+ri(-46,46),c.z+ri(-40,46),ri(9,17));
+  for(let i=0;i<8;i++) stall(c.x+ri(-30,30),c.z+ri(8,40),0xc9772f);
+  landingPad(c.x-38,c.z+35,11,0xb9a37c,0xffc766);
 }});
 
-const L_CANYON=addLandmark({name:'Sarlacc-Schlucht',x:-400,z:-1150,r:90,flatR:0,build(){
+const L_CANYON=addLandmark({name:'Sarlacc-Schlucht',x:-400,z:-1150,r:118,flatR:0,build(){
   const c=this;
-  for(let ring=0;ring<3;ring++){
-    const r=20+ring*7;
+  for(let ring=0;ring<4;ring++){
+    const r=26+ring*9;
     for(let a=0;a<r*6;a++){
       const an=a/(r*6)*Math.PI*2;
       const x=Math.round(c.x+Math.cos(an)*r), z=Math.round(c.z+Math.sin(an)*r);
       for(let y=0;y<3+ring;y++) putBlock(x,gy(x,z)+1+y,z,shade(0xb2895a,(hash2(x,z+y)-0.5)*0.12));
     }
   }
-  for(let i=0;i<10;i++) vaporator(c.x+ri(-60,60),c.z+ri(-60,60),ri(7,13));
-  landingPad(c.x,c.z+34,12,0xc3a271,0xffc766);      // Landefeld für den Falken
-  for(let i=0;i<6;i++) lampPost(c.x+ri(-30,30),c.z+ri(20,48));
+  for(let i=0;i<16;i++) vaporator(c.x+ri(-80,80),c.z+ri(-80,80),ri(8,16));
+  landingPad(c.x,c.z+44,16,0xc3a271,0xffc766);      // Landefeld für den Falken
+  for(let i=0;i<10;i++) lampPost(c.x+ri(-40,40),c.z+ri(26,62));
 }});
 
-const L_BASE=addLandmark({name:'Echo-Basis',x:750,z:-730,r:170,flatR:112,build(){
+const L_BASE=addLandmark({name:'Echo-Basis',x:750,z:-730,r:220,flatR:146,build(){
   const c=this, ice=0xc9dced;
-  crenelWall(c.x-80,c.z-50,c.x+80,c.z-50,8,ice);
-  crenelWall(c.x-80,c.z+55,c.x+80,c.z+55,8,ice);
-  crenelWall(c.x-80,c.z-50,c.x-80,c.z+55,8,ice);
-  crenelWall(c.x+80,c.z-50,c.x+80,c.z+55,8,ice);
-  archGate(c.x,c.z-50,6,9,ice,false);
+  crenelWall(c.x-106,c.z-66,c.x+106,c.z-66,10,ice);
+  crenelWall(c.x-106,c.z+74,c.x+106,c.z+74,10,ice);
+  crenelWall(c.x-106,c.z-66,c.x-106,c.z+74,10,ice);
+  crenelWall(c.x+106,c.z-66,c.x+106,c.z+74,10,ice);
+  archGate(c.x,c.z-66,8,12,ice,false);
+  for(const t2 of[[-106,-66],[106,-66],[-106,74],[106,74]]) tower(c.x+t2[0],c.z+t2[1],6,26,ice,0x9be7ff,3);
   // grosser Hangar mit Toröffnung
-  const hb=flatten(c.x,c.z,40,0xd7e6f5)+1;
-  fillBox(c.x-22,hb,c.z-16,45,10,26,0xb8c6d4,false,0.08);
-  fillBox(c.x-20,hb+1,c.z-14,41,8,22,0x0d1116);
-  for(let x=-20;x<=20;x+=6) putBlock(c.x+x,hb+9,c.z-16,0x9be7ff,true);
+  const hb=flatten(c.x,c.z,54,0xd7e6f5)+1;
+  fillBox(c.x-30,hb,c.z-22,61,14,35,0xb8c6d4,false,0.08);
+  fillBox(c.x-28,hb+1,c.z-20,57,12,31,0x0d1116);
+  for(let x=-27;x<=27;x+=6) putBlock(c.x+x,hb+13,c.z-22,0x9be7ff,true);
+  // zweiter Hangar
+  fillBox(c.x-78,hb,c.z+16,30,10,26,0xb8c6d4,false,0.08);
+  fillBox(c.x-76,hb+1,c.z+18,26,8,22,0x0d1116);
   // Flugzeuge und Speeder
-  for(let i=0;i<8;i++) xwing(c.x-30+i*9, c.z+34, i%2?0xd6753a:0xc8c2b4);
-  for(let i=0;i<6;i++) snowSpeeder(c.x-34+i*13, c.z-34);
-  shieldDome(c.x+56,c.z+6,20);
-  for(let t=0;t<3;t++) trench(c.x-90,c.z-90-t*14,110,false);
-  for(let i=0;i<10;i++) vaporator(c.x+ri(-84,84),c.z+ri(-60,70),ri(10,20));
-  banner(c.x-8,c.z-46,10,0xd6753a); banner(c.x+10,c.z-46,10,0xd6753a);
-  landingPad(c.x-58,c.z+40,13,0xc3d3e2,0x9be7ff);
+  for(let i=0;i<12;i++) xwing(c.x-44+i*9, c.z+46, i%2?0xd6753a:0xc8c2b4);
+  for(let i=0;i<9;i++) snowSpeeder(c.x-48+i*13, c.z-46);
+  shieldDome(c.x+74,c.z+8,27);
+  shieldDome(c.x-74,c.z-40,18);
+  for(let t=0;t<4;t++) trench(c.x-118,c.z-118-t*16,150,false);
+  for(let i=0;i<16;i++) vaporator(c.x+ri(-110,110),c.z+ri(-80,92),ri(11,23));
+  banner(c.x-10,c.z-60,12,0xd6753a); banner(c.x+12,c.z-60,12,0xd6753a);
+  landingPad(c.x-76,c.z+54,17,0xc3d3e2,0x9be7ff);
+  landingPad(c.x+78,c.z+58,13,0xc3d3e2,0x9be7ff);
 }});
 
-const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:150,flatR:76,build(){
+const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:190,flatR:96,build(){
   const c=this;
   iceCave(c.x,c.z);
   // Eisformationen und Gletscherzacken rund um den Eingang
-  for(let i=0;i<16;i++){
-    const a=rnd()*Math.PI*2, r=rr(70,104);
+  for(let i=0;i<26;i++){
+    const a=rnd()*Math.PI*2, r=rr(90,132);
     const x=c.x+Math.round(Math.cos(a)*r), z=c.z+Math.round(Math.sin(a)*r), b=gy(x,z)+1;
     const hgt=ri(8,22);
     for(let y=0;y<hgt;y++){
@@ -781,231 +798,251 @@ const L_CAVE=addLandmark({name:'Eishöhle',x:1200,z:-280,r:150,flatR:76,build(){
     }
   }
   // Anflugschneise vor der Mündung
-  for(let i=0;i<12;i++) lampPost(c.x+ri(-24,24), c.z-70-i*6);
-  landingPad(c.x,c.z-104,16,0xc3d3e2,0x9be7ff);
-  for(let i=0;i<3;i++) snowSpeeder(c.x-24+i*24, c.z-88);
+  for(let i=0;i<16;i++) lampPost(c.x+ri(-30,30), c.z-90-i*7);
+  landingPad(c.x,c.z-132,21,0xc3d3e2,0x9be7ff);
+  for(let i=0;i<5;i++) snowSpeeder(c.x-36+i*20, c.z-112);
 }});
 
-const L_VILLAGE=addLandmark({name:'Ewok-Dorf',x:-730,z:750,r:150,flatR:0,build(){
+const L_VILLAGE=addLandmark({name:'Ewok-Dorf',x:-730,z:750,r:195,flatR:0,build(){
   const c=this, tops=[];
-  for(let i=0;i<10;i++){
-    const an=i/10*6.283, r=44+((i%3)*9);
+  for(let i=0;i<15;i++){
+    const an=i/15*6.283, r=60+((i%3)*12);
     const x=c.x+Math.round(Math.cos(an)*r), z=c.z+Math.round(Math.sin(an)*r);
-    const ty=bigTree(x,z,ri(34,46),ri(9,13));
-    treeHouse(x,z,ty-12);
-    roofPyramid(x,z,6,ty-7,0x5a4126);
-    treeHouse(x,z,ty-24);                              // zweite Ebene
-    tops.push({x,z,y:ty-12});
+    const ty=bigTree(x,z,ri(44,58),ri(11,16));
+    treeHouse(x,z,ty-14);
+    roofPyramid(x,z,6,ty-9,0x5a4126);
+    treeHouse(x,z,ty-28);                              // zweite Ebene
+    treeHouse(x,z,ty-42);                              // dritte Ebene
+    tops.push({x,z,y:ty-14});
   }
   for(let i=1;i<tops.length;i++) ropeBridge(tops[i-1].x,tops[i-1].z,tops[i].x,tops[i].z,tops[i].y+1);
   ropeBridge(tops[tops.length-1].x,tops[tops.length-1].z,tops[0].x,tops[0].z,tops[0].y+1);
   // Dorfplatz mit Feuerstelle und Hütten am Boden
   const b=gy(c.x,c.z)+1;
-  for(let a=0;a<26;a++){ const an=a/26*6.283;
-    putBlock(Math.round(c.x+Math.cos(an)*7),b,Math.round(c.z+Math.sin(an)*7),0x6b5230); }
-  fillBox(c.x-1,b,c.z-1,3,1,3,0xff8a3c,true);
-  for(let i=0;i<7;i++){
-    const x=c.x+ri(-32,32), z=c.z+ri(-32,32), hb=gy(x,z)+1;
+  for(let a=0;a<40;a++){ const an=a/40*6.283;
+    putBlock(Math.round(c.x+Math.cos(an)*11),b,Math.round(c.z+Math.sin(an)*11),0x6b5230); }
+  fillBox(c.x-2,b,c.z-2,5,1,5,0xff8a3c,true);
+  for(let i=0;i<12;i++){
+    const x=c.x+ri(-44,44), z=c.z+ri(-44,44), hb=gy(x,z)+1;
     for(let y=0;y<4;y++)for(let dx=-3;dx<=3;dx++)for(let dz=-3;dz<=3;dz++)
       if(Math.abs(dx)===3||Math.abs(dz)===3) putBlock(x+dx,hb+y,z+dz,0x6a4c2d);
     roofPyramid(x,z,4,hb+4,0x4d3a22);
     putBlock(x,hb+2,z+3,0xffc766,true);
   }
-  for(let i=0;i<40;i++) lampPost(c.x+ri(-60,60),c.z+ri(-60,60));
+  for(let i=0;i<56;i++) lampPost(c.x+ri(-80,80),c.z+ri(-80,80));
   banner(c.x,c.z-16,8,0xd6753a);
 }});
 
-const L_WRECK=addLandmark({name:'Wrack im Wald',x:-1120,z:1050,r:80,flatR:0,build(){
+const L_WRECK=addLandmark({name:'Wrack im Wald',x:-1120,z:1050,r:105,flatR:0,build(){
   const c=this, b=gy(c.x,c.z)+1;
-  fillBox(c.x-14,b+5,c.z-10,32,13,21,0x8b9877,false,0.10);      // Rumpf
-  fillBox(c.x+16,b+10,c.z-6,12,9,13,0x93a07e,false,0.08);       // Kopf
-  for(const p2 of[[-10,-8],[10,-8],[-10,8],[10,8]])
-    for(let y=0;y<6;y++) fillBox(c.x+p2[0],b+y,c.z+p2[1],5,1,5,0x7d8a6a,false,0.08);
-  for(let i=0;i<160;i++) putBlock(c.x+ri(-18,26),b+ri(4,17),c.z+ri(-12,12),0x38792f);
-  for(let i=0;i<14;i++) bigTree(c.x+ri(-50,50),c.z+ri(-50,50),ri(20,32),ri(6,9));
-  for(let i=0;i<10;i++) lampPost(c.x+ri(-30,30),c.z+ri(-30,30));
-}});
-
-const L_FORT=addLandmark({name:'Imperiale Festung',x:790,z:790,r:180,flatR:104,build(){
-  const c=this, dark=0x241d22, glow=0xff2f14;
-  const b=flatten(c.x,c.z,46,0x1b1518)+1;
-  fillBox(c.x-30,b-1,c.z-30,61,1,61,dark,false,0.10);            // Fundamentplatte
-  tower(c.x,c.z,11,70,dark,glow,4);                              // Hauptturm
-  tower(c.x-40,c.z+28,7,44,dark,glow,3);
-  tower(c.x+36,c.z-30,7,50,dark,glow,3);
-  tower(c.x-28,c.z-40,6,38,dark,glow,3);
-  tower(c.x+42,c.z+36,6,34,dark,glow,3);
-  crenelWall(c.x-46,c.z-46,c.x+46,c.z-46,10,0x1f191d);
-  crenelWall(c.x-46,c.z+46,c.x+46,c.z+46,10,0x1f191d);
-  crenelWall(c.x-46,c.z-46,c.x-46,c.z+46,10,0x1f191d);
-  crenelWall(c.x+46,c.z-46,c.x+46,c.z+46,10,0x1f191d);
-  archGate(c.x,c.z-46,7,11,0x2b2228,false);
-  lavaBridge(c.x-110,c.z,c.x-46,c.z,b);
-  lavaBridge(c.x,c.z+110,c.x,c.z+46,b);
-  stairsUp(c.x,c.z-40,8,0,1,0x2b2228);
-  for(let i=0;i<14;i++){
-    const x=c.x+ri(-60,60), z=c.z+ri(-60,60);
-    for(let y=0;y<ri(6,18);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2);
-  }
-  banner(c.x-26,c.z+8,12,glow); banner(c.x+26,c.z+8,12,glow);
-  landingPad(c.x,c.z+70,14,0x2b2228,0xff2f14);
-}});
-
-const L_MINE=addLandmark({name:'Lava-Mine',x:1220,z:440,r:90,flatR:48,build(){
-  const c=this, b=flatten(c.x,c.z,26,0x2f272a)+1;
-  fillBox(c.x-18,b,c.z-18,37,1,37,0x2f272a,false,0.10);
-  tower(c.x,c.z,6,30,0x241d22,0xff2f14,3);
-  crenelWall(c.x-24,c.z-24,c.x+24,c.z-24,7,0x1f191d);
-  archGate(c.x,c.z-24,5,8,0x2b2228,false);
-  for(let i=0;i<16;i++){                                          // Förderklötze
-    const x=c.x+ri(-30,30), z=c.z+ri(-30,30);
-    fillBox(x,gy(x,z)+1,z,3,ri(3,8),3,0x3a3034,false,0.10);
-  }
-  for(let i=0;i<24;i++){ const x=c.x+ri(-34,34), z=c.z+ri(-34,34); putBlock(x,gy(x,z)+1,z,0xff5f14,true); }
-  landingPad(c.x-36,c.z+30,10,0x2b2228,0xff2f14);
-}});
-
-// ---------- weitere Anlagen ----------
-const L_CRAWLER=addLandmark({name:'Sandkriecher',x:-1420,z:-980,r:80,flatR:40,build(){
-  const c=this, rust=0x8a6a3f, dark=0x5b4326;
-  const b=flatten(c.x,c.z,36,0xd0b382)+1;
-  fillBox(c.x-20,b+6,c.z-11,42,16,23,rust,false,0.12);            // Rumpf
-  fillBox(c.x-22,b+2,c.z-13,46,5,27,dark,false,0.10);             // Laufwerk
-  for(let i=0;i<10;i++){                                           // Kettenglieder
-    fillBox(c.x-20+i*4,b,c.z-14,3,3,3,0x4a3521);
-    fillBox(c.x-20+i*4,b,c.z+12,3,3,3,0x4a3521);
-  }
-  fillBox(c.x+16,b+18,c.z-6,7,7,13,shade(rust,0.06),false,0.08);   // Aufbau vorn
-  for(let i=0;i<6;i++) putBlock(c.x+23,b+20+i%3,c.z-4+i*2,0xffc766,true);
-  for(let i=0;i<9;i++) putBlock(c.x-20+i*5,b+22,c.z+ri(-9,9),0x3b3f47);
-  // Ladeluke mit Rampe
-  for(let i=0;i<7;i++) fillBox(c.x-21-i,b+5-Math.floor(i*0.7),c.z-4,1,1,9,dark);
-  for(let i=0;i<7;i++) lampPost(c.x+ri(-30,30),c.z+ri(-26,26));
-  for(let i=0;i<5;i++) stall(c.x+ri(-26,26),c.z+ri(16,30),0xc9772f);
-}});
-
-const L_ARENA=addLandmark({name:'Podrennen-Arena',x:-1050,z:-1520,r:120,flatR:78,build(){
-  const c=this, sand=0xd0b382, stone=0xc4a878;
-  const b=flatten(c.x,c.z,70,sand)+1;
-  for(let ring=0;ring<2;ring++){                                    // ovale Tribünenmauer
-    const rx=54+ring*8, rz=38+ring*6;
-    for(let a=0;a<260;a++){
-      const an=a/260*Math.PI*2;
-      const x=Math.round(c.x+Math.cos(an)*rx), z=Math.round(c.z+Math.sin(an)*rz);
-      for(let y=0;y<6+ring*3;y++) putBlock(x,b+y,z,shade(stone,(hash2(x+y,z)-0.5)*0.10));
-    }
-  }
-  for(let i=0;i<12;i++){                                            // Sitzreihen und Fahnen
-    const an=i/12*Math.PI*2;
-    const x=Math.round(c.x+Math.cos(an)*48), z=Math.round(c.z+Math.sin(an)*33);
-    for(let s2=0;s2<4;s2++) fillBox(x,b+2+s2,z,3,1,3,shade(stone,-0.05*s2));
-    if(i%3===0) banner(x,z,8,[0xa33c3c,0x3c6ea3,0xc9a13a][i%3]);
-  }
-  archGate(c.x,c.z-38,6,10,stone,false);                            // Startbogen
-  archGate(c.x,c.z+38,6,10,stone,false);
-  for(let i=0;i<10;i++) lampPost(c.x+ri(-46,46),c.z+ri(-30,30));
-  landingPad(c.x+64,c.z,10,0xb9a37c,0xffc766);
-}});
-
-const L_STARWRECK=addLandmark({name:'Abgestürzter Zerstörer',x:1520,z:-1180,r:130,flatR:0,build(){
-  const c=this, hull=0x7f8792, dark=0x555c65;
-  // gewaltiger Keil, schraeg im Eis steckend
-  const base=gy(c.x,c.z)+1;
-  for(let i=0;i<130;i++){
-    const w=Math.round(44-i*0.31);
-    const x=c.x-62+i;
-    const lift=Math.round(i*0.17);                  // Bug hebt sich aus dem Schnee
-    for(let dz=-w;dz<=w;dz++)for(let dy=0;dy<9;dy++){
-      const y=base+lift+dy;
-      const edge=(Math.abs(dz)>w-2||dy===0||dy===8);
-      putBlock(x,y,c.z+dz, edge?dark:shade(hull,(hash2(x+dy,c.z+dz)-0.5)*0.10));
-    }
-    if(i%14===0) for(let dz=-w+3;dz<=w-3;dz+=9) putBlock(x,base+lift+9,c.z+dz,dark);
-  }
-  const tb=base+Math.round(129*0.17)+9;
-  fillBox(c.x+46,tb,c.z-8,13,10,17,dark,false,0.08);   // Kommandoturm
-  fillBox(c.x+50,tb+10,c.z-5,9,4,11,shade(dark,0.08),false,0.08);
-  for(let i=0;i<10;i++) putBlock(c.x+50+i%4,tb+14,c.z-6+i*2,0xff3b30,true);
-  for(let i=0;i<26;i++){                                            // Trümmer und Feuer
-    const x=c.x+ri(-80,80), z=c.z+ri(-70,70);
-    fillBox(x,gy(x,z)+1,z,ri(2,5),ri(1,4),ri(2,5),pick([0x8a9099,0x6d757e],x,z),false,0.12);
-    if(i%5===0) putBlock(x,gy(x,z)+2,z,0xff6a2a,true);
-  }
-  landingPad(c.x-84,c.z+30,11,0xc3d3e2,0x9be7ff);
-}});
-
-const L_TEMPLE=addLandmark({name:'Jedi-Tempelruine',x:-1460,z:1520,r:110,flatR:56,build(){
-  const c=this, stone=0xa8a396, moss=0x6f8a55;
-  const b=flatten(c.x,c.z,44,stone)+1;
-  for(let lvl=0;lvl<5;lvl++){                                       // Stufenpyramide
-    const r=34-lvl*6;
-    for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){
-      if(Math.max(Math.abs(x),Math.abs(z))<r-1) continue;
-      for(let y=0;y<4;y++) putBlock(c.x+x,b+lvl*4+y,c.z+z,
-        (hash2(c.x+x,c.z+z+y)>0.82)?moss:shade(stone,(hash2(x+y,z)-0.5)*0.10));
-    }
-  }
-  for(let i=0;i<12;i++){                                            // Säulenkranz
-    const an=i/12*Math.PI*2, x=Math.round(c.x+Math.cos(an)*40), z=Math.round(c.z+Math.sin(an)*40);
-    const hgt=(i%3===0)?ri(6,10):ri(11,16);                         // teils eingestürzt
-    for(let y=0;y<hgt;y++) fillBox(x,gy(x,z)+1+y,z,2,1,2,shade(stone,(hash2(x,z+y)-0.5)*0.10));
-    if(hgt>10) fillBox(x-1,gy(x,z)+1+hgt,z-1,4,1,4,stone);
-  }
-  for(let y=0;y<5;y++) fillBox(c.x-2,b+20+y,c.z-2,5,1,5, y===4?0x9be7ff:stone, y===4);  // Altar
-  for(let i=0;i<30;i++){ const x=c.x+ri(-60,60), z=c.z+ri(-60,60); bigTree(x,z,ri(16,26),ri(5,8)); }
+  fillBox(c.x-19,b+7,c.z-14,43,17,29,0x8b9877,false,0.10);      // Rumpf
+  fillBox(c.x+22,b+13,c.z-8,16,12,17,0x93a07e,false,0.08);      // Kopf
+  for(const p2 of[[-14,-11],[14,-11],[-14,11],[14,11]])
+    for(let y=0;y<8;y++) fillBox(c.x+p2[0],b+y,c.z+p2[1],6,1,6,0x7d8a6a,false,0.08);
+  for(let i=0;i<240;i++) putBlock(c.x+ri(-24,34),b+ri(5,23),c.z+ri(-16,16),0x38792f);
+  for(let i=0;i<20;i++) bigTree(c.x+ri(-66,66),c.z+ri(-66,66),ri(22,36),ri(7,10));
   for(let i=0;i<14;i++) lampPost(c.x+ri(-40,40),c.z+ri(-40,40));
 }});
 
-const L_HIDEOUT=addLandmark({name:'Rebellen-Waldposten',x:-1000,z:1260,r:80,flatR:44,build(){
-  const c=this, b=flatten(c.x,c.z,30,0x6b7f5a)+1, wall=0x7e8a72;
-  fillBox(c.x-12,b,c.z-9,25,7,19,wall,false,0.10);                  // Bunker
-  fillBox(c.x-10,b+1,c.z-7,21,5,15,0x2a2f26);
-  for(let i=0;i<5;i++) putBlock(c.x-8+i*4,b+7,c.z-9,0xffc766,true);
-  crenelWall(c.x-26,c.z-22,c.x+26,c.z-22,6,wall);
-  crenelWall(c.x-26,c.z+22,c.x+26,c.z+22,6,wall);
-  archGate(c.x,c.z-22,4,7,wall,false);
-  tower(c.x+22,c.z+14,4,20,wall,0xffc766,3);                        // Funkturm
-  landingPad(c.x-24,c.z+16,10,0x8a9a7c,0x9be7ff);
-  for(let i=0;i<3;i++) xwing(c.x-30+i*12,c.z+30,i%2?0xd6753a:0xc8c2b4);
-  for(let i=0;i<20;i++) bigTree(c.x+ri(-60,60),c.z+ri(-60,60),ri(14,24),ri(4,7));
+const L_FORT=addLandmark({name:'Imperiale Festung',x:790,z:790,r:250,flatR:136,build(){
+  const c=this, dark=0x241d22, glow=0xff2f14;
+  const b=flatten(c.x,c.z,62,0x1b1518)+1;
+  fillBox(c.x-40,b-1,c.z-40,81,1,81,dark,false,0.10);            // Fundamentplatte
+  tower(c.x,c.z,14,92,dark,glow,4);                              // Hauptturm
+  tower(c.x-54,c.z+38,9,58,dark,glow,3);
+  tower(c.x+48,c.z-40,9,66,dark,glow,3);
+  tower(c.x-38,c.z-54,8,50,dark,glow,3);
+  tower(c.x+56,c.z+48,8,46,dark,glow,3);
+  tower(c.x-62,c.z-12,7,40,dark,glow,3);
+  tower(c.x+16,c.z+62,7,42,dark,glow,3);
+  crenelWall(c.x-62,c.z-62,c.x+62,c.z-62,13,0x1f191d);
+  crenelWall(c.x-62,c.z+62,c.x+62,c.z+62,13,0x1f191d);
+  crenelWall(c.x-62,c.z-62,c.x-62,c.z+62,13,0x1f191d);
+  crenelWall(c.x+62,c.z-62,c.x+62,c.z+62,13,0x1f191d);
+  archGate(c.x,c.z-62,9,14,0x2b2228,false);
+  lavaBridge(c.x-150,c.z,c.x-62,c.z,b);
+  lavaBridge(c.x,c.z+150,c.x,c.z+62,b);
+  stairsUp(c.x,c.z-54,10,0,1,0x2b2228);
+  for(let i=0;i<22;i++){
+    const x=c.x+ri(-82,82), z=c.z+ri(-82,82);
+    for(let y=0;y<ri(7,22);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2);
+  }
+  banner(c.x-34,c.z+10,15,glow); banner(c.x+34,c.z+10,15,glow);
+  landingPad(c.x,c.z+92,18,0x2b2228,0xff2f14);
+  // Flottenhafen: Ankerfeld des Sternenzerstörers
+  const pb=flatten(c.x,c.z+170,58,0x1b1518)+1;
+  fillBox(c.x-46,pb,c.z+124,93,1,93,0x2b2228,false,0.08);
+  for(let a2=0;a2<170;a2++){
+    const an=a2/170*Math.PI*2, px=Math.round(c.x+Math.cos(an)*44), pz=Math.round(c.z+170+Math.sin(an)*44);
+    putBlock(px,pb+1,pz,0xff2f14,true);
+  }
+  for(let i=0;i<4;i++) tower(c.x-52+i*35,c.z+118,4,30,dark,glow,3);
+  banner(c.x-40,c.z+166,14,glow); banner(c.x+40,c.z+166,14,glow);
+}});
+
+const L_MINE=addLandmark({name:'Lava-Mine',x:1220,z:440,r:120,flatR:64,build(){
+  const c=this, b=flatten(c.x,c.z,36,0x2f272a)+1;
+  fillBox(c.x-25,b,c.z-25,51,1,51,0x2f272a,false,0.10);
+  tower(c.x,c.z,8,42,0x241d22,0xff2f14,3);
+  tower(c.x-28,c.z+22,5,26,0x241d22,0xff2f14,3);
+  crenelWall(c.x-33,c.z-33,c.x+33,c.z-33,9,0x1f191d);
+  crenelWall(c.x-33,c.z-33,c.x-33,c.z+33,9,0x1f191d);
+  archGate(c.x,c.z-33,6,10,0x2b2228,false);
+  for(let i=0;i<26;i++){                                          // Förderklötze
+    const x=c.x+ri(-42,42), z=c.z+ri(-42,42);
+    fillBox(x,gy(x,z)+1,z,4,ri(4,11),4,0x3a3034,false,0.10);
+  }
+  for(let i=0;i<36;i++){ const x=c.x+ri(-46,46), z=c.z+ri(-46,46); putBlock(x,gy(x,z)+1,z,0xff5f14,true); }
+  landingPad(c.x-48,c.z+40,13,0x2b2228,0xff2f14);
+}});
+
+// ---------- weitere Anlagen ----------
+const L_CRAWLER=addLandmark({name:'Sandkriecher',x:-1420,z:-980,r:105,flatR:52,build(){
+  const c=this, rust=0x8a6a3f, dark=0x5b4326;
+  const b=flatten(c.x,c.z,48,0xd0b382)+1;
+  fillBox(c.x-28,b+8,c.z-15,58,22,31,rust,false,0.12);            // Rumpf
+  fillBox(c.x-30,b+2,c.z-18,62,7,37,dark,false,0.10);             // Laufwerk
+  for(let i=0;i<14;i++){                                           // Kettenglieder
+    fillBox(c.x-28+i*4,b,c.z-19,3,3,3,0x4a3521);
+    fillBox(c.x-28+i*4,b,c.z+17,3,3,3,0x4a3521);
+  }
+  fillBox(c.x+22,b+25,c.z-8,10,10,17,shade(rust,0.06),false,0.08); // Aufbau vorn
+  for(let i=0;i<9;i++) putBlock(c.x+32,b+28+i%4,c.z-6+i*2,0xffc766,true);
+  for(let i=0;i<13;i++) putBlock(c.x-28+i*5,b+30,c.z+ri(-13,13),0x3b3f47);
+  // Ladeluke mit Rampe
+  for(let i=0;i<10;i++) fillBox(c.x-29-i,b+7-Math.floor(i*0.7),c.z-6,1,1,13,dark);
+  for(let i=0;i<11;i++) lampPost(c.x+ri(-42,42),c.z+ri(-36,36));
+  for(let i=0;i<8;i++) stall(c.x+ri(-36,36),c.z+ri(22,40),0xc9772f);
+}});
+
+const L_ARENA=addLandmark({name:'Podrennen-Arena',x:-1050,z:-1520,r:155,flatR:100,build(){
+  const c=this, sand=0xd0b382, stone=0xc4a878;
+  const b=flatten(c.x,c.z,92,sand)+1;
+  for(let ring=0;ring<3;ring++){                                    // ovale Tribünenmauer
+    const rx=70+ring*9, rz=50+ring*7;
+    for(let a=0;a<340;a++){
+      const an=a/340*Math.PI*2;
+      const x=Math.round(c.x+Math.cos(an)*rx), z=Math.round(c.z+Math.sin(an)*rz);
+      for(let y=0;y<8+ring*4;y++) putBlock(x,b+y,z,shade(stone,(hash2(x+y,z)-0.5)*0.10));
+    }
+  }
+  for(let i=0;i<18;i++){                                            // Sitzreihen und Fahnen
+    const an=i/18*Math.PI*2;
+    const x=Math.round(c.x+Math.cos(an)*62), z=Math.round(c.z+Math.sin(an)*44);
+    for(let s2=0;s2<6;s2++) fillBox(x,b+2+s2,z,4,1,4,shade(stone,-0.05*s2));
+    if(i%3===0) banner(x,z,11,[0xa33c3c,0x3c6ea3,0xc9a13a][i%3]);
+  }
+  archGate(c.x,c.z-50,8,13,stone,false);                            // Startbogen
+  archGate(c.x,c.z+50,8,13,stone,false);
+  tower(c.x-70,c.z-50,5,28,stone,0xffc766,3);                       // Zeitnahmetürme
+  tower(c.x+70,c.z-50,5,28,stone,0xffc766,3);
+  for(let i=0;i<16;i++) lampPost(c.x+ri(-60,60),c.z+ri(-40,40));
+  landingPad(c.x+84,c.z,13,0xb9a37c,0xffc766);
+}});
+
+const L_STARWRECK=addLandmark({name:'Abgestürzter Zerstörer',x:1520,z:-1180,r:170,flatR:0,build(){
+  const c=this, hull=0x7f8792, dark=0x555c65;
+  // gewaltiger Keil, schraeg im Eis steckend
+  const base=gy(c.x,c.z)+1;
+  for(let i=0;i<170;i++){
+    const w=Math.round(58-i*0.31);
+    const x=c.x-82+i;
+    const lift=Math.round(i*0.17);                  // Bug hebt sich aus dem Schnee
+    for(let dz=-w;dz<=w;dz++)for(let dy=0;dy<12;dy++){
+      const y=base+lift+dy;
+      const edge=(Math.abs(dz)>w-2||dy===0||dy===11);
+      putBlock(x,y,c.z+dz, edge?dark:shade(hull,(hash2(x+dy,c.z+dz)-0.5)*0.10));
+    }
+    if(i%14===0) for(let dz=-w+3;dz<=w-3;dz+=9) putBlock(x,base+lift+12,c.z+dz,dark);
+  }
+  const tb=base+Math.round(169*0.17)+12;
+  fillBox(c.x+58,tb,c.z-11,18,14,23,dark,false,0.08);   // Kommandoturm
+  fillBox(c.x+63,tb+14,c.z-7,12,6,15,shade(dark,0.08),false,0.08);
+  for(let i=0;i<12;i++) putBlock(c.x+64+i%5,tb+20,c.z-8+i*2,0xff3b30,true);
+  for(let i=0;i<40;i++){                                            // Trümmer und Feuer
+    const x=c.x+ri(-105,105), z=c.z+ri(-95,95);
+    fillBox(x,gy(x,z)+1,z,ri(3,7),ri(2,6),ri(3,7),pick([0x8a9099,0x6d757e],x,z),false,0.12);
+    if(i%5===0) putBlock(x,gy(x,z)+2,z,0xff6a2a,true);
+  }
+  landingPad(c.x-108,c.z+40,14,0xc3d3e2,0x9be7ff);
+}});
+
+const L_TEMPLE=addLandmark({name:'Jedi-Tempelruine',x:-1460,z:1520,r:145,flatR:74,build(){
+  const c=this, stone=0xa8a396, moss=0x6f8a55;
+  const b=flatten(c.x,c.z,58,stone)+1;
+  for(let lvl=0;lvl<7;lvl++){                                       // Stufenpyramide
+    const r=46-lvl*6;
+    for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){
+      if(Math.max(Math.abs(x),Math.abs(z))<r-1) continue;
+      for(let y=0;y<5;y++) putBlock(c.x+x,b+lvl*5+y,c.z+z,
+        (hash2(c.x+x,c.z+z+y)>0.82)?moss:shade(stone,(hash2(x+y,z)-0.5)*0.10));
+    }
+  }
+  for(let i=0;i<18;i++){                                            // Säulenkranz
+    const an=i/18*Math.PI*2, x=Math.round(c.x+Math.cos(an)*54), z=Math.round(c.z+Math.sin(an)*54);
+    const hgt=(i%3===0)?ri(8,13):ri(15,22);                         // teils eingestürzt
+    for(let y=0;y<hgt;y++) fillBox(x,gy(x,z)+1+y,z,2,1,2,shade(stone,(hash2(x,z+y)-0.5)*0.10));
+    if(hgt>13) fillBox(x-1,gy(x,z)+1+hgt,z-1,4,1,4,stone);
+  }
+  for(let y=0;y<6;y++) fillBox(c.x-3,b+35+y,c.z-3,7,1,7, y===5?0x9be7ff:stone, y===5);  // Altar
+  for(let i=0;i<44;i++){ const x=c.x+ri(-80,80), z=c.z+ri(-80,80); bigTree(x,z,ri(18,30),ri(6,9)); }
+  for(let i=0;i<20;i++) lampPost(c.x+ri(-54,54),c.z+ri(-54,54));
+}});
+
+const L_HIDEOUT=addLandmark({name:'Rebellen-Waldposten',x:-1000,z:1260,r:105,flatR:58,build(){
+  const c=this, b=flatten(c.x,c.z,40,0x6b7f5a)+1, wall=0x7e8a72;
+  fillBox(c.x-17,b,c.z-13,35,10,27,wall,false,0.10);                // Bunker
+  fillBox(c.x-15,b+1,c.z-11,31,8,23,0x2a2f26);
+  for(let i=0;i<7;i++) putBlock(c.x-11+i*4,b+10,c.z-13,0xffc766,true);
+  crenelWall(c.x-35,c.z-30,c.x+35,c.z-30,8,wall);
+  crenelWall(c.x-35,c.z+30,c.x+35,c.z+30,8,wall);
+  crenelWall(c.x-35,c.z-30,c.x-35,c.z+30,8,wall);
+  archGate(c.x,c.z-30,5,9,wall,false);
+  tower(c.x+30,c.z+19,5,28,wall,0xffc766,3);                        // Funkturm
+  tower(c.x-30,c.z-19,4,20,wall,0xffc766,3);
+  landingPad(c.x-32,c.z+22,13,0x8a9a7c,0x9be7ff);
+  for(let i=0;i<5;i++) xwing(c.x-40+i*12,c.z+40,i%2?0xd6753a:0xc8c2b4);
+  for(let i=0;i<28;i++) bigTree(c.x+ri(-80,80),c.z+ri(-80,80),ri(16,26),ri(5,8));
   banner(c.x+6,c.z-20,7,0xd6753a);
 }});
 
-const L_FOUNDRY=addLandmark({name:'Lava-Schmelzwerk',x:1480,z:1280,r:110,flatR:58,build(){
-  const c=this, b=flatten(c.x,c.z,44,0x241d22)+1, dark=0x2b2228;
-  fillBox(c.x-22,b,c.z-18,45,1,37,dark,false,0.10);                 // Werksplatte
-  for(let i=0;i<4;i++) tower(c.x-14+i*10,c.z-10,3,ri(22,34),dark,0xff2f14,3);   // Schlote
-  fillBox(c.x-8,b+1,c.z+6,17,8,13,shade(dark,0.05),false,0.10);     // Halle
-  for(let i=0;i<6;i++) putBlock(c.x-6+i*3,b+9,c.z+6,0xff5f14,true);
-  for(let i=0;i<3;i++){                                             // Schmelzbecken
-    const x=c.x-16+i*16, z=c.z+22;
-    for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){
-      const d=Math.hypot(dx,dz); if(d>4) continue;
-      putBlock(x+dx,b+1,z+dz, d>3.1?dark:0xff5f14, d<=3.1);
+const L_FOUNDRY=addLandmark({name:'Lava-Schmelzwerk',x:1480,z:1280,r:145,flatR:76,build(){
+  const c=this, b=flatten(c.x,c.z,58,0x241d22)+1, dark=0x2b2228;
+  fillBox(c.x-30,b,c.z-24,61,1,49,dark,false,0.10);                 // Werksplatte
+  for(let i=0;i<6;i++) tower(c.x-20+i*9,c.z-14,4,ri(30,46),dark,0xff2f14,3);   // Schlote
+  fillBox(c.x-11,b+1,c.z+8,23,12,19,shade(dark,0.05),false,0.10);   // Halle
+  for(let i=0;i<8;i++) putBlock(c.x-9+i*3,b+13,c.z+8,0xff5f14,true);
+  for(let i=0;i<4;i++){                                             // Schmelzbecken
+    const x=c.x-22+i*16, z=c.z+30;
+    for(let dx=-6;dx<=6;dx++)for(let dz=-6;dz<=6;dz++){
+      const d=Math.hypot(dx,dz); if(d>6) continue;
+      putBlock(x+dx,b+1,z+dz, d>4.8?dark:0xff5f14, d<=4.8);
     }
   }
-  lavaBridge(c.x-60,c.z,c.x-22,c.z,b);                              // Zufahrt
-  for(let i=0;i<12;i++){ const x=c.x+ri(-50,50), z=c.z+ri(-40,40);
-    for(let y=0;y<ri(4,12);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2); }
-  banner(c.x-18,c.z+2,10,0xff2f14);
-  landingPad(c.x+34,c.z-28,11,dark,0xff2f14);
+  lavaBridge(c.x-82,c.z,c.x-30,c.z,b);                              // Zufahrt
+  lavaBridge(c.x,c.z-82,c.x,c.z-24,b);
+  for(let i=0;i<18;i++){ const x=c.x+ri(-66,66), z=c.z+ri(-54,54);
+    for(let y=0;y<ri(5,15);y++) putBlock(x,gy(x,z)+1+y,z, y%3===2?0xff3a12:0x1d181c, y%3===2); }
+  banner(c.x-24,c.z+2,13,0xff2f14);
+  landingPad(c.x+46,c.z-38,14,dark,0xff2f14);
 }});
 
-const L_RADAR=addLandmark({name:'Eis-Radarstation',x:980,z:-1540,r:80,flatR:46,build(){
-  const c=this, ice=0xc9dced, b=flatten(c.x,c.z,30,0xd7e6f5)+1;
-  tower(c.x,c.z,5,26,ice,0x9be7ff,3);                               // Radarturm
-  for(let i=0;i<3;i++){                                             // Schüsselkranz
-    const an=i/3*Math.PI*2;
-    for(let dx=-3;dx<=3;dx++)for(let dz=-3;dz<=3;dz++)
-      if(Math.hypot(dx,dz)<=3) putBlock(Math.round(c.x+Math.cos(an)*8)+dx, b+27, Math.round(c.z+Math.sin(an)*8)+dz, 0xdfeaf4);
+const L_RADAR=addLandmark({name:'Eis-Radarstation',x:980,z:-1540,r:105,flatR:60,build(){
+  const c=this, ice=0xc9dced, b=flatten(c.x,c.z,40,0xd7e6f5)+1;
+  tower(c.x,c.z,7,38,ice,0x9be7ff,3);                               // Radarturm
+  for(let i=0;i<4;i++){                                             // Schüsselkranz
+    const an=i/4*Math.PI*2;
+    for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++)
+      if(Math.hypot(dx,dz)<=4) putBlock(Math.round(c.x+Math.cos(an)*11)+dx, b+39, Math.round(c.z+Math.sin(an)*11)+dz, 0xdfeaf4);
   }
-  fillBox(c.x-14,b,c.z+10,29,5,13,ice,false,0.08);                  // Mannschaftsbunker
-  fillBox(c.x-12,b+1,c.z+12,25,3,9,0x0d1116);
-  trench(c.x-40,c.z-30,60,false);
-  for(let i=0;i<4;i++) snowSpeeder(c.x-18+i*12,c.z-16);
-  for(let i=0;i<6;i++) vaporator(c.x+ri(-34,34),c.z+ri(-30,30),ri(9,15));
-  banner(c.x-4,c.z+8,8,0xd6753a);
-  landingPad(c.x+30,c.z+22,10,0xc3d3e2,0x9be7ff);
+  fillBox(c.x-19,b,c.z+14,39,7,19,ice,false,0.08);                  // Mannschaftsbunker
+  fillBox(c.x-17,b+1,c.z+16,35,5,15,0x0d1116);
+  trench(c.x-54,c.z-40,82,false);
+  trench(c.x-54,c.z-54,82,false);
+  for(let i=0;i<6;i++) snowSpeeder(c.x-26+i*12,c.z-22);
+  for(let i=0;i<10;i++) vaporator(c.x+ri(-46,46),c.z+ri(-40,40),ri(10,17));
+  banner(c.x-6,c.z+10,11,0xd6753a);
+  landingPad(c.x+42,c.z+30,13,0xc3d3e2,0x9be7ff);
 }});
 
 function ensureLandmarks(cx,cz){
@@ -1952,6 +1989,18 @@ function populate(){
     scene.add(fr); ships.push(fr); addCollider(fr,[9,3,7,26]);   // Rücken des Schneeriesen
   }
 
+  // Sternenzerstörer — schwebt immer über dem Flottenhafen der Festung
+  {
+    const dx=L_FORT.x, dz=L_FORT.z+170;
+    const sd=makeStarDestroyer(); sd.scale.setScalar(2.0); noFog(sd);
+    const dy=terrainH(dx,dz)+16;
+    sd.position.set(dx,dy,dz);
+    sd.userData.speed=0; sd.userData.kind='destroyer'; sd.userData.spd=34; sd.userData.acc=0.08;
+    sd.userData.hull=40; sd.userData.hitDmg=1; sd.userData.guns=12; sd.userData.clear=16; sd.userData.gunY=4; sd.userData.camY=34;
+    sd.userData.homePos=new THREE.Vector3(dx,dy,dz);
+    scene.add(sd); ships.push(sd); addCollider(sd,[46,4,74,3]);   // begehbares Oberdeck
+  }
+
   // Millennium Falke — steht immer in der Sandgrube (Sarlacc-Schlucht)
   const falconSpots=[[L_CANYON.x, L_CANYON.z+34]];
   for(const fp of falconSpots){
@@ -2242,6 +2291,8 @@ const SHOP=[
    apply:function(l){ toast('Schneeriese einsatzbereit — er wartet in der Eishöhle'); discovered.add(L_CAVE); }},
   {id:'falcon',name:'Millennium Falke',desc:'riesiger Frachter · 10 Leben, acht Laser, Höchsttempo 82',price:10000,max:1,
    apply:function(l){}},
+  {id:'destroyer',name:'Sternenzerstörer',desc:'imperiales Flaggschiff · 40 Leben, zwölf Turbolaser · parkt über dem Flottenhafen der Festung',price:20000,max:1,
+   apply:function(l){ toast('Sternenzerstörer übernommen — er schwebt über dem Flottenhafen'); discovered.add(L_FORT); }},
   // --- Lichtschwert ---
   {id:'double',name:'Doppelseitiges Lichtschwert',desc:'Klinge an beiden Enden · mehr Reichweite',price:100,max:1,
    apply:function(l){ saberDouble=true; saberDamage=Math.max(saberDamage,4); saberReach=4.4; rebuildSaber(); }},
@@ -2530,7 +2581,7 @@ function updateEBolts(dt){
     if(player.inShip&&b.position.distanceTo(player.inShip.position)<hitR){
       hit=true;
       const dmg=b.userData.heavy
-        ? (player.inShip.userData.kind==='falcon'?2:35)
+        ? ({falcon:2,destroyer:2})[player.inShip.userData.kind]||35
         : (player.inShip.userData.hitDmg||6);
       shipDamage(dmg);
     }
@@ -2553,7 +2604,9 @@ function shipDamage(v){
     player.inShip=null; camDist=8; player.shipHP=player.shipMax;
     ship.position.copy(ship.userData.homePos);
     ship.quaternion.identity(); ship.userData.speed=0;
-    damage(35); toast('X-Wing abgeschossen — Ersatzjäger steht auf dem Landeplatz');
+    damage(35);
+    toast(({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese',destroyer:'Sternenzerstörer'})[ship.userData.kind||'ship']
+          +' abgeschossen — Ersatz steht wieder auf seinem Platz');
   }
 }
 function spawnDestroyer(){
@@ -2614,9 +2667,11 @@ function updateBolts(dt){
     for(const e of enemies.slice()) if(e.position.distanceTo(b.position)<3.2){ killEnemy(e); hit=true; break; }
     if(!hit) for(const v of vehicles.slice()) if(v.type==='sd'&&v.hp&&v.o.position.distanceTo(b.position)<(v.radius||60)){
       hit=true;
-      const schwer=player.inShip&&player.inShip.userData.kind==='falcon';
+      const k2=player.inShip&&player.inShip.userData.kind;
+      const schwer=(k2==='falcon'||k2==='destroyer');
+      const wucht=(k2==='destroyer')?3:1;
       if(schwer){
-        v.hp-=boltDmg; boom(b.position,0xffd66b,5);
+        v.hp-=boltDmg*wucht; boom(b.position,0xffd66b,5);
         if(v.hp<=0) killDestroyer(v);
         else if(v.hp%5===0||v.hp<=5) toast('Sternenzerstörer: '+v.hp+' / '+(v.hpMax||50)+' Leben');
       } else {
@@ -2686,8 +2741,8 @@ function toggleSpeeder(){
     player.pos.set(ship.position.x, ground, ship.position.z+7);
     toast('Gelandet'); return;
   }
-  const SHIPNAME={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'};
-  const SHIPPRICE={ship:1000,falcon:10000,freighter:2500};
+  const SHIPNAME={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese',destroyer:'Sternenzerstörer'};
+  const SHIPPRICE={ship:1000,falcon:10000,freighter:2500,destroyer:20000};
   const sh=nearestShip();
   if(sh&&!player.inSpeeder&&!owned[sh.userData.kind||'ship']){
     const k=sh.userData.kind||'ship';
@@ -2696,10 +2751,10 @@ function toggleSpeeder(){
   }
   if(sh&&!player.inSpeeder){
     player.inShip=sh;
-    camDist=sh.userData.kind==='falcon'?38:(sh.userData.kind==='freighter'?40:17);
+    camDist=sh.userData.kind==='destroyer'?215:(sh.userData.kind==='falcon'?38:(sh.userData.kind==='freighter'?40:17));
     player.shipMax=Math.round((sh.userData.hull||100)*hullMul);
     player.shipHP=player.shipMax;
-    toast(({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'})[sh.userData.kind||'ship']+
+    toast(SHIPNAME[sh.userData.kind||'ship']+
           (sh.userData.ground?' — stampft los, Linksklick Kopfkanonen'
                              :' startklar — Linksklick Laser, Achtung: TIEs greifen an'));
     return;
@@ -3144,7 +3199,8 @@ function updateVehicles(dt,t){
       v.o.position.x+=Math.sin(v.drift)*dt*2.2;
       v.o.position.y+=Math.sin(v.drift*1.7)*dt*0.6;
       // Sternenzerstörer eröffnen das Feuer — aber nur auf den Millennium Falken
-      if(player.inShip&&player.inShip.userData.kind==='falcon'&&v.hp>0){
+      const zk=player.inShip&&player.inShip.userData.kind;
+      if((zk==='falcon'||zk==='destroyer')&&v.hp>0){
         const tgt=player.inShip.position, d=v.o.position.distanceTo(tgt);
         if(d<560){
           const to=tgt.clone().sub(v.o.position); to.y*=0.6;
@@ -3398,7 +3454,7 @@ function updateHint(){
       : '<b>[F]</b> landen · <b>Leertaste/C</b> Höhe · <b>Linksklick</b> Laser';
   else if(nearestShip()&&!player.inSpeeder){
     const sh=nearestShip(), k=sh.userData.kind||'ship';
-    const NM={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'};
+    const NM={ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese',destroyer:'Sternenzerstörer'};
     const PR={ship:1000,falcon:10000,freighter:2500};
     txt=owned[k] ? '<b>[F]</b> '+NM[k]+' besteigen'
                  : NM[k]+' verschlossen — <b>'+PR[k]+'</b> Münzen im Schwarzmarkt <b>[X]</b>';
