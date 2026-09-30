@@ -227,7 +227,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 28 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 29 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1933,31 +1933,31 @@ const ships=[], bolts=[], ebolts=[], fx=[];
 const discovered=new Set();
 
 const quests=[
-  {id:'cells',giver:'Ben',title:'Energiezellen bergen',biome:0,type:'collect',tag:'cell',need:5,have:0,
+  {id:'cells',lohn:500,giver:'Ben',title:'Energiezellen bergen',biome:0,type:'collect',tag:'cell',need:5,have:0,
    desc:'Ein Sandsturm hat unseren Konvoi zerrissen. Fünf Energiezellen liegen draussen in den Dünen. Bring sie mir — dann zeige ich dir, wie man ein Lichtschwert wirklich führt.',
    done:'Alle fünf. Dein Schwert schneidet ab jetzt tiefer. Die Macht ist mit dir.'},
-  {id:'droids',giver:'Jorra',title:'Patrouillen ausschalten',biome:0,type:'kill',need:6,have:0,
+  {id:'droids',lohn:600,giver:'Jorra',title:'Patrouillen ausschalten',biome:0,type:'kill',need:6,have:0,
    desc:'Sechs imperiale Patrouillen machen die Dünen unsicher. Räum sie weg, dann reden wir über Rabatt.',
    done:'Der Markt atmet auf. Der Speeder da drüben gehört jetzt dir.'},
-  {id:'cave',giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:45,spot:[0,0],
+  {id:'cave',lohn:600,giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:45,spot:[0,0],
    desc:'Unser Späher ist nicht zurückgekommen. Sein Signal kommt aus einer Eishöhle weit im Osten. Folge dem Kompass und stell dich mitten in der Halle auf die leuchtende Markierung.',
    done:'Signal bestätigt. Du bist zäher als das halbe Geschwader.'},
-  {id:'dogfight',giver:'Ilana',title:'Luftüberlegenheit',biome:1,type:'kill_air',need:8,have:0,
+  {id:'dogfight',lohn:900,giver:'Ilana',title:'Luftüberlegenheit',biome:1,type:'kill_air',need:8,have:0,
    desc:'Ihre Jäger beherrschen unseren Luftraum. Nimm einen X-Wing vom Landeplatz und hol acht TIEs vom Himmel. Sie greifen dich an, sobald du in der Luft bist.',
    done:'Acht Abschüsse. Der Himmel gehört wieder uns.'},
-  {id:'crystals',giver:'Rax',title:'Kyberkristalle sammeln',biome:1,type:'collect',tag:'crystal',need:4,have:0,
+  {id:'crystals',lohn:500,giver:'Rax',title:'Kyberkristalle sammeln',biome:1,type:'collect',tag:'crystal',need:4,have:0,
    desc:'Ohne Kristalle sterben die Generatoren. Vier Stück liegen draussen im Eisfeld.',
    done:'Der Schild hält wieder. Danke, Fremder.'},
-  {id:'forest',giver:'Wicket',title:'Den Wald verteidigen',biome:2,type:'kill',need:5,have:0,
+  {id:'forest',lohn:600,giver:'Wicket',title:'Den Wald verteidigen',biome:2,type:'kill',need:5,have:0,
    desc:'Weissrüstungen stapfen durch unser Dorf. Fünf davon — dann ist wieder Ruhe unter den Bäumen.',
    done:'Der Wald singt wieder. Du bist jetzt einer von uns.'},
-  {id:'wreck',giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:45,spot:[0,0],
+  {id:'wreck',lohn:700,giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:45,spot:[0,0],
    desc:'Tief im Wald liegt ein toter Stahlriese, von Ranken verschlungen. Stell dich unter seinen Bauch auf die leuchtende Markierung.',
    done:'Nur Rost und Geister. Gut, dass du zurück bist.'},
-  {id:'mine',giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:45,spot:[0,21],padY:2,
+  {id:'mine',lohn:800,giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:45,spot:[0,21],padY:2,
    desc:'Das Imperium bricht auf der Lavawelt Erz. Stell dich auf die leuchtende Markierung auf ihrer Förderplatte.',
    done:'Gut. Jetzt weisst du, wo ihre Waffen herkommen.'},
-  {id:'fortress',giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,spot:[0,40],
+  {id:'fortress',lohn:1000,giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,spot:[0,40],
    desc:'Die letzte Prüfung: der Kern der imperialen Festung. Stell dich im Innenhof vor dem Hauptturm auf die leuchtende Markierung.',
    done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'}
 ];
@@ -1986,7 +1986,7 @@ function finishReachQuest(q){
   qState[q.id]='done'; q._stand=0; q._hit=false;
   toast('Mission abgeschlossen: '+q.title);
   showDialog(q.giver, q.done);
-  addCoins(120);
+  addCoins(q.lohn||500);
   refreshQuests(); saveProfile();
 }
 function refreshStandBar(){
@@ -2005,7 +2005,8 @@ function refreshQuests(){
   $('#qList').innerHTML=list.length?list.map(q=>{
     const done=qState[q.id]==='done';
     const o=done?'abgeschlossen':(q.type==='reach'?'auf die Markierung stellen':q.have+' / '+q.need);
-    return '<div class="q '+(done?'done':'')+'"><div class="t">'+q.title+'</div><div class="o">'+o+(done?'':' · '+q.giver)+'</div></div>';
+    const lohn=done?'':' · <span style="color:#ffd24a">'+(q.lohn||500)+' \u25cf</span>';
+    return '<div class="q '+(done?'done':'')+'"><div class="t">'+q.title+'</div><div class="o">'+o+(done?'':' · '+q.giver)+lohn+'</div></div>';
   }).join(''):'<div style="opacity:.6;font-size:12px">Sprich mit einem Questgeber [E]</div>';
 }
 let dialogOpen=null;
@@ -2625,7 +2626,9 @@ function interact(){
   const name=n.userData.name, qs=quests.filter(q=>q.giver===name);
   const open=qs.find(q=>qState[q.id]==='open'), act=qs.find(q=>qState[q.id]==='active');
   if(act&&questComplete(act)){
-    qState[act.id]='done'; showDialog(name,act.done); toast('Mission abgeschlossen: '+act.title);
+    qState[act.id]='done'; showDialog(name,act.done);
+    toast('Mission abgeschlossen: '+act.title);
+    addCoins(act.lohn||500);
     if(act.id==='cells') saberDamage=3;
     if(act.id==='droids'&&!owned['speeder']){ owned['speeder']=true; toast('Belohnung: der Gleiter gehört jetzt dir'); }
     refreshQuests(); saveProfile(); return;
