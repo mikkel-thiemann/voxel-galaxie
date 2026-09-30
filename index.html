@@ -227,7 +227,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 27 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 28 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1552,16 +1552,102 @@ function makeTIE(){
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
   return g;
 }
+// ---------- Sternenzerstoerer nach Vorlage: langer Dolch mit Aufbauten ----------
+// Bug zeigt nach +z, Heck nach -z. Laenge 88, groesste Breite 52.
 function makeStarDestroyer(){
-  const g=new THREE.Group(), mat=c=>new THREE.MeshLambertMaterial({color:c});
-  for(let i=0;i<14;i++){
-    const w=44-i*3;
-    const s=new THREE.Mesh(new THREE.BoxGeometry(w,3,6),mat(shade(0x9aa2ad,-i*0.008)));
-    s.position.set(0,0,-i*6+40); g.add(s);
+  const g=new THREE.Group();
+  const mat=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
+  const glow=c=>new THREE.MeshBasicMaterial({color:c});
+  const HULL=0x9098a1, DECK=0x848c95, DARK=0x4e545c, TIEF=0x33383e, LICHT=0xd8dee6;
+  const Z0=46, Z1=-42, LEN=Z0-Z1;                 // Bug ... Heck
+  const HW=z=>26*(Z0-z)/LEN;                      // halbe Breite an dieser Stelle
+  const add=(m,x,y,z)=>{ m.position.set(x,y,z); m.castShadow=true; g.add(m); return m; };
+
+  // --- Rumpf: flacher Keil, oben Deck, unten Kiel ---
+  const N=30, dz=LEN/N;
+  for(let i=0;i<N;i++){
+    const z=Z0-(i+0.5)*dz, hw=Math.max(0.6,HW(z)), t=(Z0-z)/LEN;
+    const deck=0.9+1.4*Math.min(1,t*3.2);          // Oberschiff: vorn flach, dann volle Hoehe
+    const kiel=0.8+4.2*t;                          // Unterschiff, hinten viel tiefer
+    add(new THREE.Mesh(new THREE.BoxGeometry(hw*2,deck,dz*1.04),
+        mat(shade(HULL,(hash2(i*7,3)-0.5)*0.07))), 0, deck/2, z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(hw*1.86,kiel,dz*1.04),
+        mat(shade(DARK,(hash2(i*5,9)-0.5)*0.07))), 0, -kiel/2, z);
+    // Panzerkante an der Flanke
+    for(const sx of[-1,1])
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.7,deck*0.5,dz*1.02),mat(TIEF)), sx*(hw-0.42), deck*0.32, z);
   }
-  const tower=new THREE.Mesh(new THREE.BoxGeometry(8,5,8),mat(0x878f99)); tower.position.set(0,4,-32); g.add(tower);
-  const br=new THREE.Mesh(new THREE.BoxGeometry(4,3,4),mat(0x6d757e)); br.position.set(0,8,-32); g.add(br);
-  for(const s of[-1,1]){ const e=new THREE.Mesh(new THREE.BoxGeometry(5,5,3),new THREE.MeshBasicMaterial({color:0x9fd8ff})); e.position.set(s*7,1,-44); g.add(e); }
+  // Bugspitze
+  add(new THREE.Mesh(new THREE.BoxGeometry(2.4,1.4,5),mat(shade(HULL,0.05))),0,0.5,Z0+2);
+
+  // --- Deckplatten und Grabenlinien wie auf dem Foto ---
+  for(let i=0;i<9;i++){
+    const z=Z0-6-i*8.2, hw=HW(z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(hw*1.7,0.34,1.1),mat(TIEF)),0,2.0+i*0.07,z);
+  }
+  for(const sx of[-1,1]) for(let i=0;i<7;i++){
+    const z=Z0-10-i*9, hw=HW(z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(1.0,0.3,5.4),mat(TIEF)),sx*hw*0.55,2.1,z);
+  }
+  // helle Landebahn-Markierungen
+  for(const sx of[-1,1]) for(let i=0;i<5;i++){
+    const z=-2-i*6, hw=HW(z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(2.6,0.24,0.8),glow(LICHT)),sx*hw*0.34,2.4,z);
+  }
+
+  // --- gestufter Aufbau im Heck ---
+  const stufen=[[30,5.2,26,-16,3.4],[23,4.4,19,-22,7.6],[16.5,4.0,14,-26,11.4]];
+  for(const st of stufen){
+    add(new THREE.Mesh(new THREE.BoxGeometry(st[0],st[1],st[2]),mat(DECK)),0,st[4],st[3]);
+    // Maschinerie auf jeder Stufe
+    for(let k=0;k<12;k++){
+      const bx=(hash2(k*13,st[3])-0.5)*st[0]*0.82, bz=st[3]+(hash2(k*7,st[0])-0.5)*st[2]*0.8;
+      const h=0.6+hash2(k*3,k*5)*1.6;
+      add(new THREE.Mesh(new THREE.BoxGeometry(1.2+hash2(k,2)*2.4,h,1.2+hash2(2,k)*2.4),
+          mat(hash2(k,9)>0.6?DARK:shade(DECK,0.05))), bx, st[4]+st[1]/2+h/2, bz);
+    }
+    // Fensterbaender
+    for(const sx of[-1,1])
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,st[2]*0.6),glow(0xffd98a)),sx*st[0]/2,st[4]+st[1]*0.15,st[3]);
+  }
+  // Grabenschlucht links und rechts des Aufbaus
+  for(const sx of[-1,1])
+    add(new THREE.Mesh(new THREE.BoxGeometry(2.0,1.4,30),mat(TIEF)),sx*17,3.1,-20);
+
+  // --- Kommandoturm mit Bruecke und zwei Schildkugeln ---
+  add(new THREE.Mesh(new THREE.BoxGeometry(7,7.5,7),mat(DECK)),0,17,-26);           // Hals
+  add(new THREE.Mesh(new THREE.BoxGeometry(21,3.6,15),mat(shade(DECK,0.05))),0,22.6,-26);  // Bruecke
+  add(new THREE.Mesh(new THREE.BoxGeometry(15,2.0,11),mat(DECK)),0,25.5,-26);       // Aufsatz
+  for(const sx of[-1,1]){
+    add(new THREE.Mesh(new THREE.BoxGeometry(2.0,1.6,2.0),mat(DARK)),sx*8,26.6,-26); // Masten
+    const kugel=new THREE.Mesh(new THREE.IcosahedronGeometry(2.4,0),mat(shade(DECK,0.10)));
+    add(kugel,sx*8,29.2,-26);                                                        // Schildkugeln
+  }
+  // Bruecken-Fenster
+  for(const sz of[1,-1])
+    add(new THREE.Mesh(new THREE.BoxGeometry(17,0.9,0.3),glow(0xbfe4ff)),0,22.8,-26+sz*7.5);
+  for(let k=0;k<10;k++)
+    add(new THREE.Mesh(new THREE.BoxGeometry(1.0,0.8,1.0),mat(DARK)),
+        (hash2(k*11,5)-0.5)*18, 24.6, -26+(hash2(5,k*11)-0.5)*12);
+
+  // --- Triebwerksblock am Heck ---
+  add(new THREE.Mesh(new THREE.BoxGeometry(44,9,5),mat(DARK)),0,1.0,Z1-1.5);
+  const duesen=[[-13,6.2],[0,7.0],[13,6.2],[-22.5,3.4],[22.5,3.4]];
+  for(const d of duesen){
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(d[1],d[1],2.4,12),mat(TIEF));
+    ring.rotation.x=Math.PI/2; add(ring,d[0],1.2,Z1-3.2);
+    const feuer=new THREE.Mesh(new THREE.CylinderGeometry(d[1]*0.74,d[1]*0.74,1.2,12),glow(0xbfe9ff));
+    feuer.rotation.x=Math.PI/2; add(feuer,d[0],1.2,Z1-4.2);
+  }
+  // Hangarschlitz an der Unterseite
+  add(new THREE.Mesh(new THREE.BoxGeometry(13,1.2,6),glow(0xffd98a)),0,-4.6,-16);
+
+  // --- Geschuetztuerme auf dem Deck ---
+  for(const sx of[-1,1]) for(let k=0;k<4;k++){
+    const z=-4-k*7, hw=HW(z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(2.4,1.4,2.4),mat(DARK)),sx*hw*0.72,2.8,z);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,3.4),mat(TIEF)),sx*hw*0.72,3.4,z+1.6);
+  }
   return g;
 }
 function makeXwingShip(col){
@@ -2002,8 +2088,8 @@ function populate(){
       scene.add(t); vehicles.push({type:'tie',o:t,hostile:true,hp:3,cd:rr(0,2)});
     }
   }
-  // Sternenzerstörer über jeder Region
-  spawnDestroyer();      // es gibt immer genau einen Sternenzerstörer
+  // Sternenzerstörer: genau einer über jeder der vier Welten
+  spawnAllDestroyers();
   // Rebellen-Jäger patrouillieren tief über Wüste und Wald
   const xHubs=[[L_TOWN,0xc8c2b4],[L_TOWN,0xd6753a],[L_VILLAGE,0xc8c2b4],[L_BASE,0xd6753a]];
   for(let i=0;i<xHubs.length;i++){
@@ -2056,7 +2142,7 @@ function populate(){
     const dy=terrainH(dx,dz)+16;
     sd.position.set(dx,dy,dz);
     sd.userData.speed=0; sd.userData.kind='destroyer'; sd.userData.spd=34; sd.userData.acc=0.08;
-    sd.userData.hull=40; sd.userData.hitDmg=1; sd.userData.guns=12; sd.userData.clear=16; sd.userData.gunY=4; sd.userData.camY=34;
+    sd.userData.hull=40; sd.userData.hitDmg=1; sd.userData.guns=12; sd.userData.clear=24; sd.userData.gunY=4; sd.userData.camY=34;
     sd.userData.homePos=new THREE.Vector3(dx,dy,dz);
     scene.add(sd); ships.push(sd); addCollider(sd,[46,4,74,3]);   // begehbares Oberdeck
   }
@@ -2669,17 +2755,22 @@ function shipDamage(v){
           +' abgeschossen — Ersatz steht wieder auf seinem Platz');
   }
 }
-function spawnDestroyer(){
-  if(vehicles.some(function(v){ return v.type==='sd'; })) return;   // immer nur einer
-  const H=[L_TOWN,L_BASE,L_VILLAGE,L_FORT][ri(0,3)];
+// Je Welt (Wueste, Eis, Wald, Lava) genau ein Sternenzerstoerer
+const SD_WELT=['Tatooine','Hoth','Endor','Mustafar'];
+function sdHub(b){ return [L_TOWN,L_BASE,L_VILLAGE,L_FORT][b]; }
+function spawnDestroyer(b){
+  if(b===undefined) b=ri(0,3);
+  if(vehicles.some(function(v){ return v.type==='sd'&&v.biome===b; })) return;   // einer pro Welt
+  const H=sdHub(b);
   const sd=makeStarDestroyer(), sc=rr(2.2,3);
   sd.position.set(H.x+rr(-230,230), rr(145,185), H.z+rr(-230,230));
   sd.rotation.y=rr(0,6); sd.scale.setScalar(sc); noFog(sd);
   scene.add(sd);
-  vehicles.push({type:'sd',o:sd,drift:rr(0,3),hp:50,hpMax:50,cd:rr(1,5),radius:34*sc});
+  vehicles.push({type:'sd',o:sd,biome:b,drift:rr(0,3),hp:50,hpMax:50,cd:rr(1,5),radius:34*sc});
   addCollider(sd,[24*sc,2*sc,40*sc,1.5*sc]);
   return sd;
 }
+function spawnAllDestroyers(){ for(let b=0;b<4;b++) spawnDestroyer(b); }
 function killDestroyer(v){
   const p=v.o.position;
   for(let i=0;i<5;i++){
@@ -2690,13 +2781,15 @@ function killDestroyer(v){
   const i=vehicles.indexOf(v); if(i>=0) vehicles.splice(i,1);
   player.airKills++; player.paidAir++;
   addCoins(100);
-  toast('Sternenzerstörer zerstört! +100 Münzen');
+  const welt=SD_WELT[v.biome]||'';
+  toast('Sternenzerstörer über '+welt+' zerstört! +100 Münzen');
   saveProfile();
-  // Das Imperium schickt genau einen Ersatz
-  toast('Das Imperium schickt Ersatz …');
+  // Das Imperium schickt Ersatz — wieder genau einen für diese Welt
+  const b=v.biome;
+  toast('Das Imperium schickt Ersatz nach '+welt+' …');
   setTimeout(function(){
-    const sd=spawnDestroyer();
-    if(sd) toast('Neuer Sternenzerstörer gesichtet — Karte [M]');
+    const sd=spawnDestroyer(b);
+    if(sd) toast('Neuer Sternenzerstörer über '+welt+' — Karte [M]');
   },20000);
 }
 function killFighter(v){
