@@ -157,6 +157,10 @@
   <div id="quests" class="panel"><h3>MISSIONEN</h3><div id="qList"></div></div>
   <div id="mapWrap" class="panel"><canvas id="map" width="170" height="170"></canvas><div id="biome">TATOOINE</div></div>
   <div id="hint" class="panel"></div>
+  <div id="standbar" style="display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:112px;width:230px;height:16px;border:2px solid #ffd24a;border-radius:9px;background:rgba(0,0,0,.45);overflow:hidden">
+    <div class="fill" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd24a,#fff0b0);transition:width .12s linear"></div>
+    <div style="position:absolute;inset:0;font-size:10px;line-height:16px;text-align:center;color:#fff;letter-spacing:1px">STEHEN BLEIBEN</div>
+  </div>
   <div id="dialog" class="panel"><div class="name"></div><div class="txt"></div><div class="foot">[E] weiter · [Esc] schliessen</div></div>
   <div id="toast" class="panel"></div>
 </div>
@@ -223,7 +227,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 26 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 27 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1045,12 +1049,41 @@ const L_RADAR=addLandmark({name:'Eis-Radarstation',x:980,z:-1540,r:105,flatR:60,
   landingPad(c.x+42,c.z+30,13,0xc3d3e2,0x9be7ff);
 }});
 
+// Leuchtende Zielmarkierung: ein Ring aus Leuchtblöcken mit Kreuz in der Mitte
+function questPad(cx,cz,yOff){
+  const b=gy(cx,cz)+(yOff===undefined?1:yOff);
+  // Platz freiraeumen: Kisten, Lampen und Gerumpel auf der Markierung entfernen
+  const ck=new Set();
+  for(const dx of[-6,6])for(const dz of[-6,6]) ck.add(bkey(Math.floor((cx+dx)/CS),Math.floor((cz+dz)/CS)));
+  for(const k of ck){
+    const arr=buckets.get(k); if(!arr) continue;
+    const keep=[];
+    for(let i=0;i<arr.length;i+=5){
+      const x=arr[i],y=arr[i+1],z=arr[i+2];
+      if(Math.abs(x-cx)<=6&&Math.abs(z-cz)<=6&&y>=b-1&&y<=b+9) continue;   // weg damit
+      keep.push(arr[i],arr[i+1],arr[i+2],arr[i+3],arr[i+4]);
+    }
+    buckets.set(k,keep);
+  }
+  for(let x=-5;x<=5;x++)for(let z=-5;z<=5;z++){
+    const d=Math.hypot(x,z); if(d>5.2) continue;
+    const ring=(d>4.1), kreuz=(x===0||z===0)&&d<=2.2;
+    putBlock(cx+x,b,cz+z, (ring||kreuz)?0xffd24a:0x3a3026, ring||kreuz);
+  }
+  for(const e of[[-5,-5],[5,-5],[-5,5],[5,5]])
+    for(let y=1;y<=3;y++) putBlock(cx+e[0],b+y,cz+e[1], y===3?0xffd24a:0x3a3026, y===3);
+}
 function ensureLandmarks(cx,cz){
   const x0=cx*CS, z0=cz*CS;
   for(const L of LAND){
     if(L.built) continue;
     if(x0+CS<L.x-L.r-26||x0>L.x+L.r+26||z0+CS<L.z-L.r-26||z0>L.z+L.r+26) continue;
     L.built=true; L.build();
+    // Missionsmarkierungen, die zu dieser Anlage gehören
+    for(const q of quests){
+      if(q.type!=='reach'||LREF[q.at]!==L) continue;
+      const sp=q.spot||[0,0]; questPad(L.x+sp[0], L.z+sp[1], q.padY);
+    }
   }
 }
 function propsForChunk(cx,cz){
@@ -1820,8 +1853,8 @@ const quests=[
   {id:'droids',giver:'Jorra',title:'Patrouillen ausschalten',biome:0,type:'kill',need:6,have:0,
    desc:'Sechs imperiale Patrouillen machen die Dünen unsicher. Räum sie weg, dann reden wir über Rabatt.',
    done:'Der Markt atmet auf. Der Speeder da drüben gehört jetzt dir.'},
-  {id:'cave',giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:45,
-   desc:'Unser Späher ist nicht zurückgekommen. Sein Signal kommt aus einer Eishöhle weit im Osten. Folge dem Kompass.',
+  {id:'cave',giver:'Ilana',title:'Die Eishöhle finden',biome:1,type:'reach',at:'L_CAVE',r:45,spot:[0,0],
+   desc:'Unser Späher ist nicht zurückgekommen. Sein Signal kommt aus einer Eishöhle weit im Osten. Folge dem Kompass und stell dich mitten in der Halle auf die leuchtende Markierung.',
    done:'Signal bestätigt. Du bist zäher als das halbe Geschwader.'},
   {id:'dogfight',giver:'Ilana',title:'Luftüberlegenheit',biome:1,type:'kill_air',need:8,have:0,
    desc:'Ihre Jäger beherrschen unseren Luftraum. Nimm einen X-Wing vom Landeplatz und hol acht TIEs vom Himmel. Sie greifen dich an, sobald du in der Luft bist.',
@@ -1832,25 +1865,52 @@ const quests=[
   {id:'forest',giver:'Wicket',title:'Den Wald verteidigen',biome:2,type:'kill',need:5,have:0,
    desc:'Weissrüstungen stapfen durch unser Dorf. Fünf davon — dann ist wieder Ruhe unter den Bäumen.',
    done:'Der Wald singt wieder. Du bist jetzt einer von uns.'},
-  {id:'wreck',giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:45,
-   desc:'Tief im Wald liegt ein toter Stahlriese, von Ranken verschlungen. Sieh nach, ob darin noch etwas lebt.',
+  {id:'wreck',giver:'Chief Teeba',title:'Das Wrack im Wald',biome:2,type:'reach',at:'L_WRECK',r:45,spot:[0,0],
+   desc:'Tief im Wald liegt ein toter Stahlriese, von Ranken verschlungen. Stell dich unter seinen Bauch auf die leuchtende Markierung.',
    done:'Nur Rost und Geister. Gut, dass du zurück bist.'},
-  {id:'mine',giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:45,
-   desc:'Das Imperium bricht auf der Lavawelt Erz. Erreiche die Mine im Norden der Feuerebene.',
+  {id:'mine',giver:'Solan',title:'Die Lava-Mine',biome:3,type:'reach',at:'L_MINE',r:45,spot:[0,21],padY:2,
+   desc:'Das Imperium bricht auf der Lavawelt Erz. Stell dich auf die leuchtende Markierung auf ihrer Förderplatte.',
    done:'Gut. Jetzt weisst du, wo ihre Waffen herkommen.'},
-  {id:'fortress',giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,
-   desc:'Die letzte Prüfung: der Kern der imperialen Festung. Von dort kontrollieren sie diesen Sektor.',
+  {id:'fortress',giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,spot:[0,40],
+   desc:'Die letzte Prüfung: der Kern der imperialen Festung. Stell dich im Innenhof vor dem Hauptturm auf die leuchtende Markierung.',
    done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'}
 ];
 const qState={}; quests.forEach(q=>qState[q.id]='open');
 const LREF={L_CAVE,L_WRECK,L_FORT,L_MINE,L_TOWN,L_BASE,L_VILLAGE,L_OUTPOST,L_CANYON};
-function questTarget(q){ return q.type==='reach'?LREF[q.at]:(q._spot||null); }
+// Standplatz einer Erreichen-Mission: der genaue Fleck, auf den man sich stellt
+const STAND_R=3.6, STAND_TIME=1.6;
+function questSpot(q){
+  if(q.type!=='reach') return null;
+  const L=LREF[q.at]; if(!L) return null;
+  const sp=q.spot||[0,0];
+  return {x:L.x+sp[0], z:L.z+sp[1], L:L};
+}
+function questTarget(q){ return q.type==='reach'?questSpot(q):(q._spot||null); }
+function onQuestSpot(q){
+  const t=questSpot(q); if(!t||player.inShip) return false;
+  return Math.hypot(player.pos.x-t.x,player.pos.z-t.z)<STAND_R;
+}
 function questComplete(q){
   if(q.type!=='reach') return q.have>=q.need;
-  const t=LREF[q.at];
-  return Math.hypot(player.pos.x-t.x,player.pos.z-t.z)<q.r;
+  return onQuestSpot(q);
 }
 function activeQuest(){ return quests.find(q=>qState[q.id]==='active'); }
+function finishReachQuest(q){
+  if(qState[q.id]==='done') return;
+  qState[q.id]='done'; q._stand=0; q._hit=false;
+  toast('Mission abgeschlossen: '+q.title);
+  showDialog(q.giver, q.done);
+  addCoins(120);
+  refreshQuests(); saveProfile();
+}
+function refreshStandBar(){
+  const el=document.getElementById('standbar'); if(!el) return;
+  const q=quests.find(x=>x.type==='reach'&&qState[x.id]==='active'&&(x._stand||0)>0);
+  if(!q){ el.style.display='none'; return; }
+  el.style.display='block';
+  const pct=Math.min(100,Math.round((q._stand/STAND_TIME)*100));
+  el.querySelector('.fill').style.width=pct+'%';
+}
 
 const $=s=>document.querySelector(s);
 function toast(m){ const t=$('#toast'); t.textContent=m; t.style.opacity=1; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity=0,2800); }
@@ -1858,7 +1918,7 @@ function refreshQuests(){
   const list=quests.filter(q=>qState[q.id]!=='open');
   $('#qList').innerHTML=list.length?list.map(q=>{
     const done=qState[q.id]==='done';
-    const o=done?'abgeschlossen':(q.type==='reach'?'Kompass folgen':q.have+' / '+q.need);
+    const o=done?'abgeschlossen':(q.type==='reach'?'auf die Markierung stellen':q.have+' / '+q.need);
     return '<div class="q '+(done?'done':'')+'"><div class="t">'+q.title+'</div><div class="o">'+o+(done?'':' · '+q.giver)+'</div></div>';
   }).join(''):'<div style="opacity:.6;font-size:12px">Sprich mit einem Questgeber [E]</div>';
 }
@@ -3436,6 +3496,30 @@ function updateCompass(){
   }
   el.innerHTML=html;
 }
+// Weithin sichtbare Lichtsäule über dem Standplatz der laufenden Mission
+let questBeam=null;
+function updateQuestBeam(dt){
+  if(!questBeam){
+    const g=new THREE.Group();
+    const saeule=new THREE.Mesh(new THREE.BoxGeometry(3.2,150,3.2),
+      new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.30,depthWrite:false}));
+    saeule.position.y=75; g.add(saeule);
+    const kern=new THREE.Mesh(new THREE.BoxGeometry(1.1,150,1.1),
+      new THREE.MeshBasicMaterial({color:0xffc94a,transparent:true,opacity:0.55,depthWrite:false}));
+    kern.position.y=75; g.add(kern);
+    const ring=new THREE.Mesh(new THREE.BoxGeometry(11,0.4,11),
+      new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.45,depthWrite:false}));
+    ring.position.y=0.6; g.add(ring); g.userData.ring=ring;
+    questBeam=g; noFog(g); scene.add(g);
+  }
+  const q=activeQuest(), t=q&&q.type==='reach'?questSpot(q):null;
+  questBeam.visible=!!t;
+  if(!t) return;
+  questBeam.position.set(t.x, terrainH(t.x,t.z)+1, t.z);
+  questBeam.rotation.y+=dt*0.5;
+  const r=questBeam.userData.ring;
+  r.scale.setScalar(1+Math.sin(performance.now()*0.003)*0.12);
+}
 function updateHint(){
   const h=$('#hint');
   if(dialogOpen){ h.style.display='none'; return; }
@@ -3599,9 +3683,20 @@ function loop(now){
   }
   $('#dbg').textContent=fps+' FPS · Chunks '+chunks.size+' · Queue '+buildQueue.length;
 
-  for(const q of quests) if(q.type==='reach'&&qState[q.id]==='active'&&!q._hit&&questComplete(q)){
-    q._hit=true; toast('Ziel erreicht — zurück zu '+q.giver);
+  updateQuestBeam(dt);
+  // Auf der Markierung stehen bleiben schliesst die Mission ab
+  for(const q of quests){
+    if(q.type!=='reach'||qState[q.id]!=='active') continue;
+    if(onQuestSpot(q)){
+      q._stand=(q._stand||0)+dt;
+      if(q._stand>=STAND_TIME){ finishReachQuest(q); }
+      else if(!q._hit){ q._hit=true; toast('Markierung erreicht — bleib stehen!'); }
+    } else {
+      if(q._stand>0.15&&q._stand<STAND_TIME) toast('Zu früh weggelaufen — stell dich wieder hin');
+      q._stand=0; q._hit=false;
+    }
   }
+  refreshStandBar();
   if(composer&&(!bloom||bloom.enabled!==false)) composer.render();
   else renderer.render(scene,camera);
 }
