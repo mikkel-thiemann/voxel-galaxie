@@ -217,6 +217,7 @@
     <span>Linksklick</span><span>im Flug: Laser</span>
     <span>Leertaste lange</span><span>über 430 Höhe: ab in den Weltraum</span>
     <span>F im Weltraum</span><span>auf einem Planeten landen</span>
+    <span>T im Weltraum</span><span>Sprung zum nächsten Planeten</span>
     <span>Q</span><span>Machtstoss</span>
     <span>M</span><span>Weltkarte</span>
     <span>T</span><span>Hyperraum-Sprung</span>
@@ -229,7 +230,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 32 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 33 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -259,6 +260,7 @@ const PLANETS=[
 let planet=0;          // auf welcher Welt stehen wir
 let imOrbit=false;     // im Weltraum?
 const ORBIT_H=430;     // ab dieser Höhe beginnt der Weltraum
+const LANDE_R=420;     // so nah muss man einem Planeten kommen
 const raumHafen=new Set();   // Welten, deren Landeplatz schon gebaut ist
 let VIEW=7;
 
@@ -2824,6 +2826,7 @@ function onKey(e){
   if(e.code==='Escape'){ hideDialog(); $('#travel').style.display='none'; $('#bigmap').style.display='none'; return; }
   if(e.code==='KeyR'&&!player.alive) respawn();
   if(e.code==='KeyM'){ const b=$('#bigmap'); const on=b.style.display==='flex'; b.style.display=on?'none':'flex'; if(!on) drawBigMap(); }
+  if(e.code==='KeyT'&&imOrbit){ hyperSprung(); return; }
   if(e.code==='KeyT'){ const t=$('#travel'); const on=t.style.display==='block'; t.style.display=on?'none':'block'; if(!on) drawTravel(); }
   if(e.code==='KeyE') interact();
   if(e.code==='KeyF') toggleSpeeder();
@@ -2861,15 +2864,7 @@ function initPointerLock(){
 function nearestNPC(){ let b=null,bd=4.5; for(const n of npcs){ const d=n.position.distanceTo(player.pos); if(d<bd){bd=d;b=n;} } return b; }
 function interact(){
   if(dialogOpen){ hideDialog(); return; }
-  if(imOrbit){                                  // im Weltraum: Planet anfliegen
-    const n=naechsterPlanet();
-    if(n.i>=0&&n.d<320){
-      if(n.i===planet){ toast(PLANETS[n.i].name+' — du kommst gerade von dort'); }
-      reiseZu(n.i); return;
-    }
-    toast('Zu weit weg — flieg näher an einen Planeten heran');
-    return;
-  }
+  if(imOrbit){ landeAufPlanet(); return; }      // im Weltraum: Planet anfliegen
   const n=nearestNPC(); if(!n) return;
   const name=n.userData.name, qs=quests.filter(q=>q.giver===name);
   const open=qs.find(q=>qState[q.id]==='open'), act=qs.find(q=>qState[q.id]==='active');
@@ -3135,6 +3130,7 @@ function rescuePlayer(silent){
   saveProfile();
 }
 function toggleSpeeder(){
+  if(imOrbit){ landeAufPlanet(); return; }      // im Weltraum: [F] landet auf dem Planeten
   if(player.inShip){
     const ship=player.inShip, ground=topAt(ship.position.x,ship.position.z);
     const clr=ship.userData.clear||2.5;
@@ -3938,6 +3934,26 @@ function baueRaum(){
     raumGrp.add(a);
   }
 }
+// Auf dem naechstgelegenen Planeten landen
+// Hyperraum-Sprung: direkt vor den naechsten Planeten der Liste
+let sprungZiel=0;
+function hyperSprung(){
+  if(!imOrbit) return;
+  sprungZiel=(sprungZiel+1)%PLANETS.length;
+  const g=planetKugeln[sprungZiel];
+  const ziel=g.position.clone().add(new THREE.Vector3(0,0,240));
+  const sh=player.inShip;
+  if(sh){ sh.position.copy(ziel); sh.userData.speed=0; }
+  player.pos.copy(ziel); player.vel.set(0,0,0);
+  boom(ziel.clone().add(new THREE.Vector3(0,0,-40)),0x9be7ff,10);
+  toast('Hyperraum-Sprung zu '+PLANETS[sprungZiel].name+' — jetzt [F] zum Landen');
+}
+function landeAufPlanet(){
+  const n=naechsterPlanet();
+  if(n.i<0){ toast('Kein Planet in Reichweite'); return; }
+  if(n.d<=LANDE_R){ reiseZu(n.i); return; }
+  toast(PLANETS[n.i].name+' ist noch '+Math.round(n.d-LANDE_R)+' m entfernt — flieg näher heran');
+}
 function naechsterPlanet(){
   let best=-1,bd=1e9;
   for(let i=0;i<planetKugeln.length;i++){
@@ -4007,9 +4023,9 @@ function updateHint(){
     const n=naechsterPlanet();
     if(n.i>=0){
       const P=PLANETS[n.i];
-      h.textContent=(n.d<320)
+      h.textContent=(n.d<=LANDE_R)
         ? '[F] auf '+P.name+' landen — '+P.info
-        : P.name+' · '+Math.round(n.d)+' m — flieg näher heran, dann [F]';
+        : P.name+' · '+Math.round(n.d)+' m — [T] springt direkt hin, dann [F] landen';
       h.style.display='block';
     }
     return;
