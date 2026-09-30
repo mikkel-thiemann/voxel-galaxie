@@ -54,7 +54,8 @@
   #quests h3{font-size:12px;letter-spacing:2px;margin-bottom:8px;color:#ffd66b}
   .q{margin-bottom:9px;padding-left:10px;border-left:3px solid #ffd66b}
   .q .t{font-weight:bold}.q .o{opacity:.85;font-size:12px}
-  .q.done{border-color:#5fe08a}.q.done .t{color:#5fe08a}
+  .q.done{border-color:#5fe08a;background:rgba(95,224,138,.10);border-radius:0 6px 6px 0}
+  .q.done .t{color:#5fe08a}.q.done .o{color:#5fe08a;opacity:.95}
 
   #mapWrap{position:absolute;right:16px;bottom:16px;padding:6px}
   #map{display:block;width:170px;height:170px;image-rendering:pixelated;border:2px solid rgba(0,0,0,.6)}
@@ -230,7 +231,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 36 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 37 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -2367,12 +2368,35 @@ const quests=[
    done:'Gut. Jetzt weisst du, wo ihre Waffen herkommen.'},
   {id:'fortress',lohn:1000,giver:'Solan',title:'Der Kern der Festung',biome:3,type:'reach',at:'L_FORT',r:50,spot:[0,40],
    desc:'Die letzte Prüfung: der Kern der imperialen Festung. Stell dich im Innenhof vor dem Hauptturm auf die leuchtende Markierung.',
-   done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'}
+   done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'},
+  // ---------- neue Questgeber an den neuen Anlagen ----------
+  {id:'crawler',lohn:600,giver:'Nubi',title:'Der Sandkriecher',biome:0,type:'reach',at:'L_CRAWLER',r:60,spot:[0,0],
+   desc:'Unser Sandkriecher steht seit Tagen still. Lauf hin und stell dich auf die Markierung neben der Rampe, dann weiss ich, dass der Weg sicher ist.',
+   done:'Der Weg ist frei. Die Maschine rollt wieder — du bekommst deinen Anteil.'},
+  {id:'arena',lohn:700,giver:'Sebi',title:'Die alte Rennbahn',biome:0,type:'reach',at:'L_ARENA',r:80,spot:[0,0],
+   desc:'Weit im Nordwesten liegt die alte Podrennen-Arena. Stell dich mitten in die Bahn auf die Markierung — dann eröffne ich die Saison.',
+   done:'Die Bahn lebt wieder! Nimm das hier, du hast es dir verdient.'},
+  {id:'radar',lohn:700,giver:'Kaida',title:'Die Radarstation',biome:1,type:'reach',at:'L_RADAR',r:70,spot:[0,-30],
+   desc:'Unsere Radarstation im hohen Norden antwortet nicht mehr. Stell dich neben dem Graben auf die Markierung, dann sehen wir dich auf dem Schirm.',
+   done:'Signal klar und deutlich. Der Norden gehört wieder uns.'},
+  {id:'starwreck',lohn:900,giver:'Tam',title:'Der gefallene Riese',biome:1,type:'reach',at:'L_STARWRECK',r:110,spot:[-120,70],
+   desc:'Ein Sternenzerstörer ist im Eis abgestürzt. Geh hin und stell dich auf die Markierung neben dem Wrack — wir wollen wissen, ob noch jemand lebt.',
+   done:'Nur Eis und Stille. Gut, dass du zurück bist.'},
+  {id:'hideout',lohn:600,giver:'Nara',title:'Den Posten säubern',biome:2,type:'kill',need:4,have:0,
+   desc:'Weissrüstungen schleichen um unseren Waldposten. Vier davon, dann ist wieder Ruhe.',
+   done:'Sauber gemacht. Der Posten steht noch.'},
+  {id:'temple',lohn:900,giver:'Meister Odan',title:'Die Tempelruine',biome:2,type:'reach',at:'L_TEMPLE',r:90,spot:[0,50],
+   desc:'Tief im Westwald steht eine alte Jedi-Tempelruine. Stell dich vor die Stufen auf die Markierung und horch, ob die Macht dort noch atmet.',
+   done:'Sie atmet noch. Und in dir auch — das spüre ich.'},
+  {id:'foundry',lohn:1000,giver:'Vex',title:'Das Schmelzwerk',biome:3,type:'reach',at:'L_FOUNDRY',r:90,spot:[0,-2],padY:2,
+   desc:'Im Süden der Feuerebene giesst das Imperium seine Panzerung. Stell dich mitten auf die Werksplatte, dann weiss ich, wie weit sie sind.',
+   done:'Jetzt kennen wir ihre Zahlen. Das war Gold wert.'}
 ];
 const qState={}; quests.forEach(q=>qState[q.id]='open');
 const paidQuests=new Set();     // Missionen, deren Belohnung schon ausgezahlt wurde
 function payQuest(q){ if(paidQuests.has(q.id)) return 0; paidQuests.add(q.id); const n=q.lohn||500; addCoins(n); return n; }
-const LREF={L_CAVE,L_WRECK,L_FORT,L_MINE,L_TOWN,L_BASE,L_VILLAGE,L_OUTPOST,L_CANYON};
+const LREF={L_CAVE,L_WRECK,L_FORT,L_MINE,L_TOWN,L_BASE,L_VILLAGE,L_OUTPOST,L_CANYON,
+            L_CRAWLER,L_ARENA,L_STARWRECK,L_TEMPLE,L_HIDEOUT,L_FOUNDRY,L_RADAR};
 // Standplatz einer Erreichen-Mission: der genaue Fleck, auf den man sich stellt
 const STAND_R=3.6, STAND_TIME=1.6;
 function questSpot(q){
@@ -2414,7 +2438,7 @@ function refreshQuests(){
   const list=quests.filter(q=>qState[q.id]!=='open');
   $('#qList').innerHTML=list.length?list.map(q=>{
     const done=qState[q.id]==='done';
-    const o=done?'abgeschlossen':(q.type==='reach'?'auf die Markierung stellen':q.have+' / '+q.need);
+    const o=done?'\u2713 abgeschlossen':(q.type==='reach'?'auf die Markierung stellen':q.have+' / '+q.need);
     const lohn=done?'':' · <span style="color:#ffd24a">'+(q.lohn||500)+' \u25cf</span>';
     return '<div class="q '+(done?'done':'')+'"><div class="t">'+q.title+'</div><div class="o">'+o+(done?'':' · '+q.giver)+lohn+'</div></div>';
   }).join(''):'<div style="opacity:.6;font-size:12px">Sprich mit einem Questgeber [E]</div>';
@@ -2521,6 +2545,14 @@ function populate(){
   addNPC('Wicket',L_VILLAGE.x+8,L_VILLAGE.z-12,{skin:0x8a5a34,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x6d4525},'#a8e08a');
   addNPC('Chief Teeba',L_VILLAGE.x-14,L_VILLAGE.z+14,{skin:0x9a6a3e,body:0x7d5530,arms:0x8a5f36,legs:0x66431f,hood:0x4e3a20},'#a8e08a');
   addNPC('Solan',L_TOWN.x+44,L_TOWN.z-28,{skin:0xd8b090,body:0x2c2f38,arms:0x353945,legs:0x22252c,hood:0x1d2027},'#ff9a6b');
+  // ---------- Questgeber an den neuen Anlagen ----------
+  addNPC('Nubi',L_CRAWLER.x+16,L_CRAWLER.z+22,{skin:0x6b4a2c,body:0x6d4525,arms:0x7a4f2b,legs:0x5a3a1f,hood:0x4a2f18});
+  addNPC('Sebi',L_ARENA.x+22,L_ARENA.z+34,{skin:0xd8a878,body:0xa85f3a,arms:0xbb6d42,legs:0x7d4528});
+  addNPC('Kaida',L_RADAR.x-10,L_RADAR.z+20,{skin:0xe4b48c,body:0xb6c6d6,arms:0xa8b8c8,legs:0x7d8a97},'#9be7ff');
+  addNPC('Tam',L_STARWRECK.x-104,L_STARWRECK.z+44,{skin:0xcf9a70,body:0x5d6b7d,arms:0x53606f,legs:0x3f4a58},'#9be7ff');
+  addNPC('Nara',L_HIDEOUT.x+10,L_HIDEOUT.z-8,{skin:0xc98f5c,body:0x6b7f5a,arms:0x7a8f66,legs:0x4d5a3f},'#a8e08a');
+  addNPC('Meister Odan',L_TEMPLE.x+18,L_TEMPLE.z+44,{skin:0xd8b090,body:0x8a7a56,arms:0x9a8a64,legs:0x6d6144,hood:0x7a6c4c},'#a8e08a');
+  addNPC('Vex',L_FOUNDRY.x-20,L_FOUNDRY.z+16,{skin:0xd8a878,body:0x3a2f34,arms:0x453a3f,legs:0x2a2228,hood:0x241d22},'#ff9a6b');
 
   for(let i=0;i<8;i++){
     const x=L_TOWN.x+ri(-46,46), z=L_TOWN.z+ri(50,86);
@@ -3537,7 +3569,7 @@ function killEnemy(e){
   player.groundKills++; player.paidGround++;
   addCoins(5);
   scene.remove(e); const i=enemies.indexOf(e); if(i>=0) enemies.splice(i,1);
-  for(const q of quests) if(q.type==='kill'&&qState[q.id]==='active'&&q.biome===e.userData.biome&&q.have<q.need){
+  for(const q of quests) if(q.type==='kill'&&qState[q.id]==='active'&&q.have<q.need){
     q.have++; refreshQuests();
     if(q.have>=q.need) toast('Ziel erfüllt — zurück zu '+q.giver);
   }
