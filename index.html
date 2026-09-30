@@ -227,7 +227,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 29 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 30 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1962,6 +1962,8 @@ const quests=[
    done:'Du hast die Festung erreicht. Die Galaxie gehört dir — geh und erkunde sie.'}
 ];
 const qState={}; quests.forEach(q=>qState[q.id]='open');
+const paidQuests=new Set();     // Missionen, deren Belohnung schon ausgezahlt wurde
+function payQuest(q){ if(paidQuests.has(q.id)) return 0; paidQuests.add(q.id); const n=q.lohn||500; addCoins(n); return n; }
 const LREF={L_CAVE,L_WRECK,L_FORT,L_MINE,L_TOWN,L_BASE,L_VILLAGE,L_OUTPOST,L_CANYON};
 // Standplatz einer Erreichen-Mission: der genaue Fleck, auf den man sich stellt
 const STAND_R=3.6, STAND_TIME=1.6;
@@ -1986,7 +1988,7 @@ function finishReachQuest(q){
   qState[q.id]='done'; q._stand=0; q._hit=false;
   toast('Mission abgeschlossen: '+q.title);
   showDialog(q.giver, q.done);
-  addCoins(q.lohn||500);
+  payQuest(q);
   refreshQuests(); saveProfile();
 }
 function refreshStandBar(){
@@ -2254,7 +2256,7 @@ function collectProfile(){
     name:account, created:(loadAccounts()[account]||{}).created||Date.now(), last:Date.now(),
     airKills:player.airKills, groundKills:player.groundKills, saberDamage:saberDamage,
     coins:player.coins, owned:Object.keys(owned), levels:JSON.parse(JSON.stringify(lvl)), skin:skinId,
-    paidAir:player.paidAir, paidGround:player.paidGround,
+    paidAir:player.paidAir, paidGround:player.paidGround, paidQuests:Array.from(paidQuests),
     quests:quests.map(function(q){ return {id:q.id,st:qState[q.id],have:q.have||0}; }),
     discovered:Array.from(discovered).map(function(L){ return L.name; }),
     pos:[player.pos.x,player.pos.y,player.pos.z]
@@ -2304,6 +2306,21 @@ function applyProfile(pr){
       const missing=qq.need-qq.have; const save=qq.need; qq.need=missing;
       spawnQuestItems(qq); qq.need=save;
     }
+  }
+  // Bereits erledigte Missionen, die noch nie eine Belohnung gebracht haben
+  paidQuests.clear();
+  if(pr.paidQuests) for(const id of pr.paidQuests) paidQuests.add(id);
+  let nachLohn=0, nachZahl=0;
+  for(const q of quests){
+    if(qState[q.id]!=='done'||paidQuests.has(q.id)) continue;
+    paidQuests.add(q.id); nachLohn+=(q.lohn||500); nachZahl++;
+  }
+  if(nachLohn>0){
+    player.coins+=nachLohn;
+    setTimeout(function(){
+      toast('Nachzahlung: '+nachLohn+' Münzen für '+nachZahl+' erledigte '+(nachZahl===1?'Mission':'Missionen'));
+    },2200);
+    saveProfile();
   }
   if(pr.discovered) for(const n of pr.discovered){
     const L=LAND.find(function(x){ return x.name===n; }); if(L) discovered.add(L);
@@ -2628,7 +2645,7 @@ function interact(){
   if(act&&questComplete(act)){
     qState[act.id]='done'; showDialog(name,act.done);
     toast('Mission abgeschlossen: '+act.title);
-    addCoins(act.lohn||500);
+    payQuest(act);
     if(act.id==='cells') saberDamage=3;
     if(act.id==='droids'&&!owned['speeder']){ owned['speeder']=true; toast('Belohnung: der Gleiter gehört jetzt dir'); }
     refreshQuests(); saveProfile(); return;
