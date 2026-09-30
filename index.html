@@ -231,7 +231,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 37 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 38 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -2414,7 +2414,19 @@ function questComplete(q){
   if(q.type!=='reach') return q.have>=q.need;
   return onQuestSpot(q);
 }
-function activeQuest(){ return (planet===0&&!imOrbit)?quests.find(q=>qState[q.id]==='active'):null; }
+// Von allen laufenden Missionen die mit dem naechstgelegenen Ziel
+function activeQuest(){
+  if(planet!==0||imOrbit) return null;
+  const laufend=quests.filter(function(q){ return qState[q.id]==='active'; });
+  if(!laufend.length) return null;
+  let best=null, bd=Infinity;
+  for(const q of laufend){
+    const t=questTarget(q);
+    const d=t?Math.hypot(t.x-player.pos.x,t.z-player.pos.z):1e9;
+    if(d<bd){ bd=d; best=q; }
+  }
+  return best||laufend[0];
+}
 function finishReachQuest(q){
   if(qState[q.id]==='done') return;
   qState[q.id]='done'; q._stand=0; q._hit=false;
@@ -4147,28 +4159,36 @@ function updateCompass(){
   el.innerHTML=html;
 }
 // Weithin sichtbare Lichtsäule über dem Standplatz der laufenden Mission
-let questBeam=null;
+const questBeams=[];
+function macheLichtsaeule(){
+  const g=new THREE.Group();
+  const saeule=new THREE.Mesh(new THREE.BoxGeometry(3.2,150,3.2),
+    new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.30,depthWrite:false}));
+  saeule.position.y=75; g.add(saeule);
+  const kern=new THREE.Mesh(new THREE.BoxGeometry(1.1,150,1.1),
+    new THREE.MeshBasicMaterial({color:0xffc94a,transparent:true,opacity:0.55,depthWrite:false}));
+  kern.position.y=75; g.add(kern);
+  const ring=new THREE.Mesh(new THREE.BoxGeometry(11,0.4,11),
+    new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.45,depthWrite:false}));
+  ring.position.y=0.6; g.add(ring); g.userData.ring=ring;
+  noFog(g); scene.add(g); questBeams.push(g); return g;
+}
+// Alle laufenden Erreichen-Missionen leuchten gleichzeitig, nicht nur die erste
 function updateQuestBeam(dt){
-  if(!questBeam){
-    const g=new THREE.Group();
-    const saeule=new THREE.Mesh(new THREE.BoxGeometry(3.2,150,3.2),
-      new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.30,depthWrite:false}));
-    saeule.position.y=75; g.add(saeule);
-    const kern=new THREE.Mesh(new THREE.BoxGeometry(1.1,150,1.1),
-      new THREE.MeshBasicMaterial({color:0xffc94a,transparent:true,opacity:0.55,depthWrite:false}));
-    kern.position.y=75; g.add(kern);
-    const ring=new THREE.Mesh(new THREE.BoxGeometry(11,0.4,11),
-      new THREE.MeshBasicMaterial({color:0xff9a1f,transparent:true,opacity:0.45,depthWrite:false}));
-    ring.position.y=0.6; g.add(ring); g.userData.ring=ring;
-    questBeam=g; noFog(g); scene.add(g);
+  const ziele=[];
+  if(planet===0&&!imOrbit)
+    for(const q of quests)
+      if(q.type==='reach'&&qState[q.id]==='active'){ const t=questSpot(q); if(t) ziele.push(t); }
+  while(questBeams.length<ziele.length) macheLichtsaeule();
+  const puls=1+Math.sin(performance.now()*0.003)*0.12;
+  for(let i=0;i<questBeams.length;i++){
+    const b=questBeams[i], t=ziele[i];
+    b.visible=!!t;
+    if(!t) continue;
+    b.position.set(t.x, terrainH(t.x,t.z)+1, t.z);
+    b.rotation.y+=dt*0.5;
+    b.userData.ring.scale.setScalar(puls);
   }
-  const q=activeQuest(), t=q&&q.type==='reach'?questSpot(q):null;
-  questBeam.visible=!!t;
-  if(!t) return;
-  questBeam.position.set(t.x, terrainH(t.x,t.z)+1, t.z);
-  questBeam.rotation.y+=dt*0.5;
-  const r=questBeam.userData.ring;
-  r.scale.setScalar(1+Math.sin(performance.now()*0.003)*0.12);
 }
 // ======================================================================
 //  Weltraum
