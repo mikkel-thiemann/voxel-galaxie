@@ -227,7 +227,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 30 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 31 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1973,7 +1973,7 @@ function questSpot(q){
   const sp=q.spot||[0,0];
   return {x:L.x+sp[0], z:L.z+sp[1], L:L};
 }
-function questTarget(q){ return q.type==='reach'?questSpot(q):(q._spot||null); }
+function questTarget(q){ return q.type==='reach'?questSpot(q):(q.type==='collect'?nearestItem(q):null); }
 function onQuestSpot(q){
   const t=questSpot(q); if(!t||player.inShip) return false;
   return Math.hypot(player.pos.x-t.x,player.pos.z-t.z)<STAND_R;
@@ -2030,22 +2030,80 @@ function addEnemy(x,z){
   g.userData.hp=2; g.userData.biome=biomeAt(x,z); g.userData.cd=0; g.userData.walkT=rr(0,6);
   scene.add(g); enemies.push(g);
 }
-function addPickup(x,z,tag,color){
+function addPickup(x,z,tag,color,mitStrahl){
   const m=new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6),new THREE.MeshBasicMaterial({color}));
   m.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.22})));
-  m.position.set(x,topAt(x,z)+1.6,z); m.userData={tag,t:rr(0,6)};
-  scene.add(m); pickups.push(m);
-}
-function spawnQuestItems(q){
-  const c=q.biome===0?L_TOWN:q.biome===1?L_BASE:q.biome===2?L_VILLAGE:L_FORT;
-  q._spots=[];
-  for(let i=0;i<q.need;i++){
-    const a=rnd()*Math.PI*2, d=rr(90,240);
-    const x=Math.round(c.x+Math.cos(a)*d), z=Math.round(c.z+Math.sin(a)*d);
-    addPickup(x,z,q.tag,q.tag==='cell'?0xffd23f:0x7fd8ff);
-    q._spots.push({x,z});
+  if(mitStrahl){                                   // weithin sichtbarer Lichtstrahl
+    const str=new THREE.Mesh(new THREE.BoxGeometry(2.6,110,2.6),
+      new THREE.MeshBasicMaterial({color:0xff6a2a,transparent:true,opacity:.34,depthWrite:false}));
+    str.position.y=55; m.add(str);
+    const kern=new THREE.Mesh(new THREE.BoxGeometry(1.0,110,1.0),
+      new THREE.MeshBasicMaterial({color:0xffe08a,transparent:true,opacity:.85,depthWrite:false}));
+    kern.position.y=55; m.add(kern);
+    const fuss=new THREE.Mesh(new THREE.BoxGeometry(7,0.35,7),
+      new THREE.MeshBasicMaterial({color:0xff6a2a,transparent:true,opacity:.45,depthWrite:false}));
+    fuss.position.y=-1.2; m.add(fuss);
   }
-  q._spot=q._spots[0];
+  m.position.set(x,topAt(x,z)+1.6,z); m.userData={tag,t:rr(0,6)};
+  noFog(m);
+  scene.add(m); pickups.push(m);
+  return m;
+}
+// Ein sicherer Platz: fester Boden, keine Lava, nicht in einer Anlage, nicht zu steil
+function safeSpot(cx,cz,minD,maxD){
+  for(let k=0;k<60;k++){
+    const a=rnd()*Math.PI*2, d=rr(minD,maxD);
+    const x=Math.round(cx+Math.cos(a)*d), z=Math.round(cz+Math.sin(a)*d);
+    if(Math.abs(x)>WR-40||Math.abs(z)>WR-40) continue;
+    if(biomeAt(x,z)===3&&lavaNoise(x,z)<0.34) continue;            // Lavasee
+    let drin=false;
+    for(const L of LAND) if(Math.max(Math.abs(x-L.x),Math.abs(z-L.z))<L.r*0.8){ drin=true; break; }
+    if(drin) continue;                                             // nicht mitten in einer Anlage
+    const h=terrainH(x,z);
+    let steil=0;
+    for(const o of[[4,0],[-4,0],[0,4],[0,-4]]) if(Math.abs(terrainH(x+o[0],z+o[1])-h)>5) steil++;
+    if(steil>=2) continue;                                         // keine Felsspalte
+    return {x,z};
+  }
+  const a=rnd()*Math.PI*2, d=(minD+maxD)/2;
+  return {x:Math.round(cx+Math.cos(a)*d), z:Math.round(cz+Math.sin(a)*d)};
+}
+function spawnQuestItems(q,anzahl){
+  const c=q.biome===0?L_TOWN:q.biome===1?L_BASE:q.biome===2?L_VILLAGE:L_FORT;
+  const n=(anzahl===undefined)?q.need:anzahl;
+  if(!q._items) q._items=[];
+  for(let i=0;i<n;i++){
+    const sp=safeSpot(c.x,c.z,70,170);
+    const m=addPickup(sp.x,sp.z,q.tag,q.tag==='cell'?0xffd23f:0x7fd8ff,true);
+    m.userData.quest=q.id;
+    q._items.push(m);
+  }
+}
+// Naechstes noch offenes Sammelstueck dieser Mission
+function nearestItem(q){
+  if(!q._items) return null;
+  let best=null,bd=1e9;
+  for(const m of q._items){
+    if(pickups.indexOf(m)<0) continue;
+    const d=Math.hypot(m.position.x-player.pos.x,m.position.z-player.pos.z);
+    if(d<bd){bd=d;best=m;}
+  }
+  return best?{x:best.position.x,z:best.position.z}:null;
+}
+// Sicherheitsnetz: fehlt ein Stueck, wird es in der Naehe neu ausgelegt
+function restockQuestItems(q){
+  const offen=(q._items||[]).filter(function(m){ return pickups.indexOf(m)>=0; });
+  q._items=offen;
+  const fehlt=(q.need-q.have)-offen.length;
+  if(fehlt>0){
+    for(let i=0;i<fehlt;i++){
+      const sp=safeSpot(player.pos.x,player.pos.z,60,140);
+      const m=addPickup(sp.x,sp.z,q.tag,q.tag==='cell'?0xffd23f:0x7fd8ff,true);
+      m.userData.quest=q.id; q._items.push(m);
+    }
+    const wort=(q.tag==='cell')?(fehlt===1?'Energiezelle':'Energiezellen'):(fehlt===1?'Kristall':'Kristalle');
+    toast('Neue Spur: '+fehlt+' '+wort+' in der Nähe');
+  }
 }
 function populate(){
   addNPC('Ben',L_TOWN.x+20,L_TOWN.z+16,{skin:0xd8a878,body:0xa88b62,arms:0xbb9a70,legs:0x8d7350,hood:0x9c8158});
@@ -2303,8 +2361,7 @@ function applyProfile(pr){
     if(!qq) continue;
     qState[q.id]=q.st; if(qq.need) qq.have=q.have||0;
     if(qq.type==='collect'&&q.st==='active'&&qq.have<qq.need){
-      const missing=qq.need-qq.have; const save=qq.need; qq.need=missing;
-      spawnQuestItems(qq); qq.need=save;
+      qq._items=[]; spawnQuestItems(qq, qq.need-qq.have);
     }
   }
   // Bereits erledigte Missionen, die noch nie eine Belohnung gebracht haben
@@ -3276,7 +3333,7 @@ function updatePickups(dt,t){
       const q=quests.find(q=>q.type==='collect'&&q.tag===p.userData.tag&&qState[q.id]==='active');
       if(q&&q.have<q.need){
         q.have++;
-        if(q._spots){ q._spots.shift(); q._spot=q._spots[0]; }
+        if(q._items){ const i2=q._items.indexOf(p); if(i2>=0) q._items.splice(i2,1); }
         refreshQuests(); toast(q.title+': '+q.have+'/'+q.need);
         if(q.have>=q.need) toast('Ziel erfüllt — zurück zu '+q.giver);
       } else toast('Aufgesammelt');
@@ -3543,6 +3600,9 @@ function vehicleMarkers(){
               name:({ship:'X-Wing',falcon:'Millennium Falke',freighter:'Schneeriese'})[k]});
   }
   if(speeder&&owned['speeder']) out.push({x:speeder.position.x,z:speeder.position.z,col:'#ff8a4c',name:'Gleiter'});
+  for(const q of quests) if(q.type==='collect'&&qState[q.id]==='active'&&q._items)
+    for(const m of q._items) if(pickups.indexOf(m)>=0)
+      out.push({x:m.position.x,z:m.position.z,col:q.tag==='cell'?'#ffd23f':'#7fd8ff',name:q.tag==='cell'?'Zelle':'Kristall'});
   for(const v of vehicles) if(v.type==='sd'&&v.hp>0)
     out.push({x:v.o.position.x,z:v.o.position.z,col:'#ff3b30',name:'Sternenzerstörer'});
   return out;
@@ -3797,6 +3857,13 @@ function loop(now){
   $('#dbg').textContent=fps+' FPS · Chunks '+chunks.size+' · Queue '+buildQueue.length;
 
   updateQuestBeam(dt);
+  // alle paar Sekunden pruefen, ob noch genug Sammelstuecke in der Welt liegen
+  window._restockT=(window._restockT||0)-dt;
+  if(window._restockT<=0){
+    window._restockT=5;
+    for(const q of quests)
+      if(q.type==='collect'&&qState[q.id]==='active'&&q.have<q.need) restockQuestItems(q);
+  }
   // Auf der Markierung stehen bleiben schliesst die Mission ab
   for(const q of quests){
     if(q.type!=='reach'||qState[q.id]!=='active') continue;
