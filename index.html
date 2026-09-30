@@ -230,7 +230,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 33 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 34 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -3316,8 +3316,11 @@ function updatePlayer(dt){
     if(u.ground){ dir.y=0; dir.normalize(); }        // Bodenfahrzeug: nur vorwärts, kein Steigflug
     ship.position.addScaledVector(dir, u.speed*dt);
     if(!u.ground){
-      if(keys['Space']) ship.position.y+=26*dt;
-      if(keys['KeyC']||keys['ControlLeft']) ship.position.y-=26*dt;
+      const hoeheUeberGrund=ship.position.y-topAt(ship.position.x,ship.position.z);
+      // Steigflug: oben wird die Luft duenn, das Schiff klettert schneller
+      const steig=(26+Math.min(90,Math.max(0,hoeheUeberGrund-100)*0.55))*(sprint?2.2:1);
+      if(keys['Space']) ship.position.y+=steig*dt;
+      if(keys['KeyC']||keys['ControlLeft']) ship.position.y-=40*dt;
     }
     if(ix) ship.position.addScaledVector(new THREE.Vector3(dir.z,0,-dir.x).normalize(), -ix*22*dt);
     const ground=topAt(ship.position.x,ship.position.z), clr=u.clear||2.5;
@@ -3341,9 +3344,9 @@ function updatePlayer(dt){
       if(ship.position.y<ground+clr){ ship.position.y=ground+clr; u.speed*=0.9; }
       if(!u.ground && !imOrbit){
         const hoehe=ship.position.y-topAt(ship.position.x,ship.position.z);
-        if(hoehe>280 && (!window._raumTip||performance.now()>window._raumTip)){
+        if(hoehe>200 && (!window._raumTip||performance.now()>window._raumTip)){
           window._raumTip=performance.now()+12000;
-          toast('Weiter steigen — ab Höhe '+ORBIT_H+' beginnt der Weltraum');
+          toast('Die Jäger bleiben zurück — Leertaste halten, ab Höhe '+ORBIT_H+' beginnt der Weltraum');
         }
       }
       if(ship.position.y>ORBIT_H && !u.ground){ betreteOrbit(); }
@@ -3580,7 +3583,8 @@ function updateVehicles(dt,t){
       for(let i=0;i<4;i++) L[i].rotation.x=Math.sin(t*1.4+i*1.6)*0.28;
     } else if(v.type==='tie'){
       const p=v.o.userData.path;
-      if(v.hostile&&player.inShip){
+      const zuHoch=player.inShip&&(player.inShip.position.y-topAt(player.inShip.position.x,player.inShip.position.z))>260;
+      if(v.hostile&&player.inShip&&!zuHoch){
         const tgt=player.inShip.position, d=v.o.position.distanceTo(tgt);
         if(d<300){
           const to=tgt.clone().sub(v.o.position).normalize();
@@ -3608,7 +3612,8 @@ function updateVehicles(dt,t){
       v.o.position.y+=Math.sin(v.drift*1.7)*dt*0.6;
       // Sternenzerstörer eröffnen das Feuer — aber nur auf den Millennium Falken
       const zk=player.inShip&&player.inShip.userData.kind;
-      if((zk==='falcon'||zk==='destroyer')&&v.hp>0){
+      const hochRaus=player.inShip&&(player.inShip.position.y-topAt(player.inShip.position.x,player.inShip.position.z))>260;
+      if((zk==='falcon'||zk==='destroyer')&&v.hp>0&&!hochRaus){
         const tgt=player.inShip.position, d=v.o.position.distanceTo(tgt);
         if(d<560){
           const to=tgt.clone().sub(v.o.position); to.y*=0.6;
