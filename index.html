@@ -215,6 +215,8 @@
     <span>F</span><span>Speeder / X-Wing ein-/aussteigen</span>
     <span>Leertaste / C</span><span>im Flug steigen / sinken</span>
     <span>Linksklick</span><span>im Flug: Laser</span>
+    <span>Leertaste lange</span><span>über 430 Höhe: ab in den Weltraum</span>
+    <span>F im Weltraum</span><span>auf einem Planeten landen</span>
     <span>Q</span><span>Machtstoss</span>
     <span>M</span><span>Weltkarte</span>
     <span>T</span><span>Hyperraum-Sprung</span>
@@ -227,7 +229,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 31 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 32 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -243,6 +245,21 @@
 // ======================================================================
 const CS=32, WR=2400;
 const BIOME_NAMES=['TATOOINE','HOTH','ENDOR','MUSTAFAR'];
+// ---------- Planeten: die Heimatwelt und drei neue Welten ----------
+const PLANETS=[
+  {name:'Heimatwelt', kurz:'HEIMATWELT', farbe:0xd9a45e, ring:0xffd7a0, bahn:[0,1100,0],
+   info:'Vier Zonen: Wüste, Eis, Wald und Lava'},
+  {name:'Kamino',     kurz:'KAMINO',     farbe:0x5f93bd, ring:0xbfe4ff, bahn:[-1500,1180,-900],
+   info:'Meereswelt mit Plattformstädten auf Stelzen'},
+  {name:'Geonosis',   kurz:'GEONOSIS',   farbe:0xb65a30, ring:0xffb27a, bahn:[1600,1050,-1100],
+   info:'Roter Felsplanet voller Nadeln und Bogenbrücken'},
+  {name:'Coruscant',  kurz:'CORUSCANT',  farbe:0x8f98ab, ring:0xffe9a8, bahn:[200,1260,1700],
+   info:'Eine einzige Stadt, Türme bis zum Horizont'}
+];
+let planet=0;          // auf welcher Welt stehen wir
+let imOrbit=false;     // im Weltraum?
+const ORBIT_H=430;     // ab dieser Höhe beginnt der Weltraum
+const raumHafen=new Set();   // Welten, deren Landeplatz schon gebaut ist
 let VIEW=7;
 
 function hash2(x,z){ let n=(x|0)*374761393+(z|0)*668265263; n=(n^(n>>13))*1274126177; return ((n^(n>>16))>>>0)/2147483647.5; }
@@ -264,7 +281,25 @@ function biomeWeights(x,z){ const bx=smooth(-BLEND,BLEND,x), bz=smooth(-BLEND,BL
 function biomeAt(x,z){ const w=biomeWeights(x,z); let m=0,i=0; for(let k=0;k<4;k++) if(w[k]>m){m=w[k];i=k;} return i; }
 function lavaNoise(x,z){ return fbm(x+430,z-940,4,0.0075); }
 
+// --- Kamino: ruhige See mit langer Dünung ---
+function kaminoH(x,z){
+  return 16 + Math.sin(x*0.018)*1.6 + Math.sin(z*0.023)*1.4 + fbm(x+70,z-30,2,0.006)*2.2;
+}
+// --- Geonosis: rotes Gestein mit Felsnadeln ---
+function geonosisH(x,z){
+  const g=12+fbm(x-410,z+220,4,0.0085)*20;
+  const n=fbm(x+640,z-380,3,0.0036);
+  return g + (n>0.66 ? Math.min(78,(n-0.66)*420) : 0) - (n<0.30 ? Math.min(14,(0.30-n)*90) : 0);
+}
+// --- Coruscant: flaches Stadtplateau mit sanften Stufen ---
+function coruscantH(x,z){
+  const b=24+fbm(x+210,z+880,3,0.004)*10;
+  return b + (Math.floor(x/64)+Math.floor(z/64))%2*2;
+}
 function baseH(x,z){
+  if(planet===1) return kaminoH(x,z);
+  if(planet===2) return geonosisH(x,z);
+  if(planet===3) return coruscantH(x,z);
   const w=biomeWeights(x,z); let h=0;
   if(w[0]>0.001){
     const dune=12+fbm(x+900,z+400,4,0.009)*22+Math.sin(x*0.022)*4;
@@ -286,7 +321,7 @@ const LAND=[];
 const dug=new Map(); let dugCount=0;          // von der Macht abgetragene Geländeblöcke
 function terrainH(x,z){
   let h=baseH(x,z);
-  for(let i=0;i<LAND.length;i++){
+  if(planet===0) for(let i=0;i<LAND.length;i++){
     const L=LAND[i]; if(!L.flatR) continue;
     const d=Math.max(Math.abs(x-L.x),Math.abs(z-L.z));
     if(d<L.flatR+22){ const w=1-smooth(L.flatR,L.flatR+22,d); h=lerp(h,L.baseY,w); }
@@ -304,7 +339,13 @@ const PAL={
   grass:[0x4e8b3a,0x437a33,0x5c9c44,0x386b2c,0x59913f],
   dirt:[0x6b4b2c,0x7a5834,0x5a3f24],
   ash:[0x4a3c3f,0x3c3134,0x574749],
-  obsi:[0x2a2229,0x352b32,0x201a20]
+  obsi:[0x2a2229,0x352b32,0x201a20],
+  meer:[0x2d6f92,0x25627f,0x357fa3,0x1f5771],
+  schaum:[0xbfe4f2,0xd8f0f8],
+  geo:[0xb05a30,0x9c4e28,0xc46a3a,0x8a4522,0xd08a55],
+  geoDark:[0x6f3a1e,0x5c2f18],
+  stadt:[0x8f98ab,0x7d8697,0x9ea7b8,0x6d7484],
+  stadtTief:[0x4a5060,0x3d434f]
 };
 const pick=(a,x,z)=>a[Math.floor(hash2(x*7.1+3,z*3.3+9)*a.length)%a.length];
 function shade(hex,d){
@@ -312,6 +353,16 @@ function shade(hex,d){
   return (Math.round(clamp(r,0,1)*255)<<16)|(Math.round(clamp(g,0,1)*255)<<8)|Math.round(clamp(b,0,1)*255);
 }
 function surfaceOf(x,z,h){
+  if(planet===1){                                   // Kamino: Wasser mit Schaumkronen
+    return {c:(h>=20)?pick(PAL.schaum,x,z):pick(PAL.meer,x,z), g:false};
+  }
+  if(planet===2){                                   // Geonosis
+    return {c:(h>46)?pick(PAL.geoDark,x,z):pick(PAL.geo,x,z), g:false};
+  }
+  if(planet===3){                                   // Coruscant: Stadtboden
+    const gitter=(Math.abs(x%32)<2||Math.abs(z%32)<2);
+    return {c:gitter?0x5a6274:pick(PAL.stadt,x,z), g:false};
+  }
   const w=biomeWeights(x,z), r=hash2(x*5.3+1,z*2.7+4);
   let acc=0,b=3; for(let i=0;i<4;i++){ acc+=w[i]; if(r<acc){b=i;break;} }
   if(b===0) return {c:h>52?pick(PAL.rock,x,z):pick(PAL.sand,x,z),g:false};
@@ -1074,6 +1125,7 @@ function questPad(cx,cz,yOff){
     for(let y=1;y<=3;y++) putBlock(cx+e[0],b+y,cz+e[1], y===3?0xffd24a:0x3a3026, y===3);
 }
 function ensureLandmarks(cx,cz){
+  if(planet>0){ raumhafenBauen(); return; }
   const x0=cx*CS, z0=cz*CS;
   for(const L of LAND){
     if(L.built) continue;
@@ -1086,7 +1138,104 @@ function ensureLandmarks(cx,cz){
     }
   }
 }
+// ---------- Plattformstadt auf Kamino ----------
+function kaminoPlattform(cx,cz){
+  const b=gy(cx,cz), h=b+ri(16,26), r=ri(14,22), wand=0xd6dce4, dach=0xb9c2cc;
+  for(const o of[[-r+3,-r+3],[r-3,-r+3],[-r+3,r-3],[r-3,r-3],[0,0]])
+    for(let y=0;y<h-b;y++) fillBox(cx+o[0]-1,b+y,cz+o[1]-1,3,1,3,0x93a0ad);   // Stelzen
+  for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){
+    if(Math.hypot(x,z)>r) continue;
+    putBlock(cx+x,h,cz+z, (Math.hypot(x,z)>r-1.4)?0x9be7ff:shade(wand,(hash2(cx+x,cz+z)-0.5)*0.06), Math.hypot(x,z)>r-1.4);
+  }
+  const kh=ri(8,15), kr=Math.max(5,r-7);
+  for(let y=1;y<=kh;y++){
+    const rr2=kr*(1-y/(kh*2.4));
+    for(let a=0;a<Math.round(rr2*7);a++){
+      const an=a/Math.round(rr2*7)*Math.PI*2;
+      const x=Math.round(cx+Math.cos(an)*rr2), z=Math.round(cz+Math.sin(an)*rr2);
+      const fenster=(y%4===2&&a%6===0);
+      putBlock(x,h+y,z, fenster?0xffe9a8:shade(wand,(hash2(x+y,z)-0.5)*0.05), fenster);
+    }
+  }
+  for(let x=-kr;x<=kr;x++)for(let z=-kr;z<=kr;z++)
+    if(Math.hypot(x,z)<=kr*0.62) putBlock(cx+x,h+kh+1,cz+z,dach);
+  for(let i=0;i<4;i++) putBlock(cx+ri(-r,r),h+kh+2,cz+ri(-r,r),0xff3b30,true);
+}
+// ---------- Felsnadel und Bogen auf Geonosis ----------
+function geoNadel(cx,cz){
+  const b=gy(cx,cz)+1, h=ri(22,52);
+  for(let y=0;y<h;y++){
+    const r=Math.max(1,Math.round(5*(1-y/h)+1));
+    for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++)
+      if(Math.hypot(x,z)<=r) putBlock(cx+x,b+y,cz+z,pick(PAL.geo,cx+x+y,cz+z));
+  }
+  if(hash2(cx,cz)>0.55){                                   // Wabenturm mit Öffnungen
+    for(let y=2;y<h-4;y+=6) for(const o of[[3,0],[-3,0],[0,3],[0,-3]])
+      putBlock(cx+o[0],b+y,cz+o[1],0x2a1a10);
+  }
+}
+function geoBogen(cx,cz){
+  const b=gy(cx,cz)+1, w=ri(9,16), hh=ri(10,20);
+  for(let a=0;a<=26;a++){
+    const an=a/26*Math.PI;
+    const x=cx+Math.round(Math.cos(an)*w), y=b+Math.round(Math.sin(an)*hh);
+    for(let t=-2;t<=2;t++) fillBox(x,y,cz+t,2,3,1,pick(PAL.geo,x,cz+t),false,0.1);
+  }
+}
+// ---------- Hochhaus auf Coruscant ----------
+function stadtTurm(cx,cz){
+  const b=gy(cx,cz)+1, h=ri(24,96), r=ri(4,11);
+  const c1=pick(PAL.stadt,cx,cz), c2=pick(PAL.stadtTief,cx+7,cz-3);
+  for(let y=0;y<h;y++){
+    const rr2=(y>h*0.7)?Math.max(2,r-2):r;
+    for(let x=-rr2;x<=rr2;x++)for(let z=-rr2;z<=rr2;z++){
+      if(Math.abs(x)!==rr2&&Math.abs(z)!==rr2) continue;
+      const fenster=(y%3===1&&(Math.abs(x)+Math.abs(z)+y)%5===0);
+      putBlock(cx+x,b+y,cz+z, fenster?0xffe9a8:((y%12===0)?c2:shade(c1,(hash2(cx+x+y,cz+z)-0.5)*0.05)), fenster);
+    }
+  }
+  for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++) putBlock(cx+x,b+h,cz+z,c2);
+  for(let y=1;y<=ri(3,9);y++) putBlock(cx,b+h+y,cz, y%2?0xff3b30:0x4a5060, y%2===1);
+  if(hash2(cx+3,cz+9)>0.6){                                 // Landeplattform am Turm
+    const py=b+ri(10,Math.max(12,h-8)), pr=r+5;
+    for(let x=-pr;x<=pr;x++)for(let z=r;z<=r+9;z++)
+      if(Math.abs(x)<=pr) putBlock(cx+x,py,cz+z, (z===r+9||Math.abs(x)===pr)?0xffd24a:0x646c7d, (z===r+9||Math.abs(x)===pr));
+  }
+}
+// ---------- Landeplatz beim Ankunftspunkt jeder neuen Welt ----------
+function raumhafenBauen(){
+  if(planet===0||raumHafen.has(planet)) return;
+  raumHafen.add(planet);
+  const b=gy(0,0)+1;
+  const col=planet===1?0xd6dce4:(planet===2?0x8a4522:0x646c7d);
+  for(let x=-20;x<=20;x++)for(let z=-20;z<=20;z++){
+    const d=Math.hypot(x,z); if(d>20) continue;
+    putBlock(x,b,z, d>18.4?0xffd24a:shade(col,(hash2(x,z)-0.5)*0.08), d>18.4);
+  }
+  for(let i=0;i<8;i++){
+    const an=i/8*Math.PI*2, x=Math.round(Math.cos(an)*16), z=Math.round(Math.sin(an)*16);
+    for(let y=1;y<=5;y++) putBlock(x,b+y,z, y===5?0xffd24a:0x4a5060, y===5);
+  }
+  for(let y=1;y<=14;y++) fillBox(-24,b+y,-24,3,1,3, y===14?0xff3b30:0x4a5060, y===14);
+  for(let y=1;y<=14;y++) fillBox(22,b+y,22,3,1,3, y===14?0xff3b30:0x4a5060, y===14);
+}
 function propsForChunk(cx,cz){
+  if(planet>0){                                   // Bauwerke der neuen Welten
+    const x=cx*CS+16, z=cz*CS+16, h=hash2(cx*13+5,cz*29+7);
+    if(Math.max(Math.abs(x),Math.abs(z))<34) return;    // Landeplatz frei halten
+    if(planet===1){ if(h<0.30) kaminoPlattform(x+ri(-8,8),z+ri(-8,8)); }
+    else if(planet===2){
+      if(h<0.34) geoNadel(x+ri(-10,10),z+ri(-10,10));
+      else if(h<0.44) geoBogen(x+ri(-8,8),z+ri(-8,8));
+      else if(h<0.56){ const bx=x+ri(-12,12), bz=z+ri(-12,12);
+        for(let k=0;k<4;k++) fillBox(bx+ri(-6,6),gy(bx,bz)+1,bz+ri(-6,6),ri(2,5),ri(2,7),ri(2,5),pick(PAL.geo,bx,bz),false,0.12); }
+    }
+    else if(planet===3){
+      stadtTurm(x+ri(-9,9),z+ri(-9,9));
+      if(h<0.5) stadtTurm(x+ri(-14,14),z+ri(-14,14));
+    }
+    return;
+  }
   const key=hash2(cx*31+7,cz*17+3), n=1+Math.floor(key*3);
   for(let i=0;i<n;i++){
     const hx=hash2(cx*13+i*7,cz*29+i*3), hz=hash2(cx*97+i*5,cz*53+i*11);
@@ -1287,6 +1436,7 @@ function addCollider(obj,dims){
   colliders.push(c); return c;
 }
 function colliderHit(x,y,z){
+  if(planet>0||imOrbit) return false;
   for(let i=0;i<colliders.length;i++){
     const c=colliders[i], o=c.obj;
     if(player.inShip===o||(player.inSpeeder&&o===speeder)) continue;      // eigenes Fahrzeug ignorieren
@@ -1300,6 +1450,7 @@ function colliderHit(x,y,z){
 }
 function colliderTop(x,z,y){                    // höchste Trittfläche unter den Füssen
   let best=-1e9;
+  if(planet>0||imOrbit) return best;
   for(let i=0;i<colliders.length;i++){
     const c=colliders[i], o=c.obj;
     if(player.inShip===o||(player.inSpeeder&&o===speeder)) continue;
@@ -1371,6 +1522,7 @@ function placeStructBlock(x,y,z,col){
 }
 const buildQueue=[];
 function updateStreaming(force){
+  if(imOrbit) return;
   const pcx=Math.floor(player.pos.x/CS), pcz=Math.floor(player.pos.z/CS);
   buildQueue.length=0;
   for(let dx=-VIEW;dx<=VIEW;dx++)for(let dz=-VIEW;dz<=VIEW;dz++){
@@ -1401,6 +1553,14 @@ const SKY=[
   {top:0x18354e,bot:0x6e9a80,fog:0x38584b,amb:0x86ad92,dir:0xcdeab0,sun:0xd9ffd0,bl:0.32},
   {top:0x4a0f05,bot:0xd4380f,fog:0x7a1c07,amb:0xffab7d,dir:0xff7a3e,sun:0xff7a30,bl:0.55}
 ];
+// Himmel der neuen Welten (Index = Planet) und des Weltraums
+const PSKY=[
+  null,
+  {top:0x4a6d87,bot:0xbcd3e0,fog:0x9db8c6,amb:0xb6cbd8,dir:0xdfeef6,sun:0xffffff,bl:0.24},  // Kamino
+  {top:0x7a2f14,bot:0xe0a06a,fog:0xc07a48,amb:0xffc79a,dir:0xffb87a,sun:0xfff0c0,bl:0.28},  // Geonosis
+  {top:0x2a3a55,bot:0xe0b070,fog:0x7d7f92,amb:0xc5cbd8,dir:0xffe0b0,sun:0xfff4d0,bl:0.34}   // Coruscant
+];
+const RAUM={top:0x05060c,bot:0x080a14,fog:0x05060c,amb:0x3a4055,dir:0xdfe6ff,sun:0xffffff,bl:0.42};
 function pixTex(){
   const c=document.createElement('canvas'); c.width=c.height=16; const g=c.getContext('2d');
   for(let y=0;y<16;y++)for(let x=0;x<16;x++){ const v=206+Math.floor(Math.random()*50); g.fillStyle='rgb('+v+','+v+','+v+')'; g.fillRect(x,y,1,1); }
@@ -1982,7 +2142,7 @@ function questComplete(q){
   if(q.type!=='reach') return q.have>=q.need;
   return onQuestSpot(q);
 }
-function activeQuest(){ return quests.find(q=>qState[q.id]==='active'); }
+function activeQuest(){ return (planet===0&&!imOrbit)?quests.find(q=>qState[q.id]==='active'):null; }
 function finishReachQuest(q){
   if(qState[q.id]==='done') return;
   qState[q.id]='done'; q._stand=0; q._hit=false;
@@ -2229,6 +2389,7 @@ let spawnT=0;
 // Abgestellte Fahrzeuge finden von selbst zu ihrem Platz zurück,
 // damit ein gekauftes Fahrzeug immer dort steht, wo es hingehört.
 function updateParking(){
+  if(planet>0||imOrbit) return;            // fremde Welt: das Schiff bleibt, wo es steht
   for(const sh of ships){
     if(player.inShip===sh) continue;
     const h=sh.userData.homePos; if(!h) continue;
@@ -2314,7 +2475,7 @@ function collectProfile(){
     name:account, created:(loadAccounts()[account]||{}).created||Date.now(), last:Date.now(),
     airKills:player.airKills, groundKills:player.groundKills, saberDamage:saberDamage,
     coins:player.coins, owned:Object.keys(owned), levels:JSON.parse(JSON.stringify(lvl)), skin:skinId,
-    paidAir:player.paidAir, paidGround:player.paidGround, paidQuests:Array.from(paidQuests),
+    paidAir:player.paidAir, paidGround:player.paidGround, paidQuests:Array.from(paidQuests), planet:planet,
     quests:quests.map(function(q){ return {id:q.id,st:qState[q.id],have:q.have||0}; }),
     discovered:Array.from(discovered).map(function(L){ return L.name; }),
     pos:[player.pos.x,player.pos.y,player.pos.z]
@@ -2381,6 +2542,10 @@ function applyProfile(pr){
   }
   if(pr.discovered) for(const n of pr.discovered){
     const L=LAND.find(function(x){ return x.name===n; }); if(L) discovered.add(L);
+  }
+  if(pr.planet&&pr.planet>0&&PLANETS[pr.planet]){
+    setTimeout(function(){ reiseZu(pr.planet); },120);   // zurück auf die zuletzt besuchte Welt
+    return;
   }
   if(pr.pos){
     player.pos.set(pr.pos[0],pr.pos[1],pr.pos[2]);
@@ -2696,6 +2861,15 @@ function initPointerLock(){
 function nearestNPC(){ let b=null,bd=4.5; for(const n of npcs){ const d=n.position.distanceTo(player.pos); if(d<bd){bd=d;b=n;} } return b; }
 function interact(){
   if(dialogOpen){ hideDialog(); return; }
+  if(imOrbit){                                  // im Weltraum: Planet anfliegen
+    const n=naechsterPlanet();
+    if(n.i>=0&&n.d<320){
+      if(n.i===planet){ toast(PLANETS[n.i].name+' — du kommst gerade von dort'); }
+      reiseZu(n.i); return;
+    }
+    toast('Zu weit weg — flieg näher an einen Planeten heran');
+    return;
+  }
   const n=nearestNPC(); if(!n) return;
   const name=n.userData.name, qs=quests.filter(q=>q.giver===name);
   const open=qs.find(q=>qState[q.id]==='open'), act=qs.find(q=>qState[q.id]==='active');
@@ -3169,7 +3343,15 @@ function updatePlayer(dt){
       ship.position.y=lerp(ship.position.y, ground+clr+bob, 1-Math.pow(0.0006,dt));
     } else {
       if(ship.position.y<ground+clr){ ship.position.y=ground+clr; u.speed*=0.9; }
-      if(ship.position.y>430) ship.position.y=430;
+      if(!u.ground && !imOrbit){
+        const hoehe=ship.position.y-topAt(ship.position.x,ship.position.z);
+        if(hoehe>280 && (!window._raumTip||performance.now()>window._raumTip)){
+          window._raumTip=performance.now()+12000;
+          toast('Weiter steigen — ab Höhe '+ORBIT_H+' beginnt der Weltraum');
+        }
+      }
+      if(ship.position.y>ORBIT_H && !u.ground){ betreteOrbit(); }
+      if(ship.position.y>2000) ship.position.y=2000;
     }
     u.roll=lerp(u.roll||0, -ix*0.55, 1-Math.pow(0.02,dt));
     ship.quaternion.setFromEuler(new THREE.Euler(u.roll, player.yaw+Math.PI/2, u.ground?0:player.pitch, 'YZX'));
@@ -3484,9 +3666,14 @@ const cTop=new THREE.Color(),cBot=new THREE.Color(),cFog=new THREE.Color(),cAmb=
 const SUNDIR=new THREE.Vector3(-0.55,0.34,-0.76).normalize();
 const SUNDIR2=new THREE.Vector3(-0.44,0.27,-0.86).normalize();
 function updateAtmosphere(dt){
-  const w=biomeWeights(player.pos.x,player.pos.z);
+  const w=(planet===0&&!imOrbit)?biomeWeights(player.pos.x,player.pos.z):[0,0,0,0];
   cTop.setRGB(0,0,0);cBot.setRGB(0,0,0);cFog.setRGB(0,0,0);cAmb.setRGB(0,0,0);cDir.setRGB(0,0,0);cSun.setRGB(0,0,0);
   let bl=0;
+  if(imOrbit||planet>0){
+    const S=imOrbit?RAUM:PSKY[planet];
+    cTop.setHex(S.top); cBot.setHex(S.bot); cFog.setHex(S.fog);
+    cAmb.setHex(S.amb); cDir.setHex(S.dir); cSun.setHex(S.sun); bl=S.bl;
+  }
   for(let i=0;i<4;i++){
     if(w[i]<=0) continue; const S=SKY[i];
     cTop.add(tmpC.setHex(S.top).multiplyScalar(w[i])); cBot.add(tmpC.setHex(S.bot).multiplyScalar(w[i]));
@@ -3503,11 +3690,13 @@ function updateAtmosphere(dt){
   sky.position.copy(camera.position);
   clouds.position.x=camera.position.x; clouds.position.z=camera.position.z;
   clouds.material.map.offset.x+=dt*0.0015;
-  clouds.material.opacity=0.22+0.4*(w[0]+w[3]);
+  clouds.material.opacity=imOrbit?0:(planet===1?0.45:(planet===3?0.30:(planet===2?0.18:0.22+0.4*(w[0]+w[3]))));
+  clouds.visible=!imOrbit;
 
   sunA.position.copy(camera.position).addScaledVector(SUNDIR,900);
   sunB.position.copy(camera.position).addScaledVector(SUNDIR2,900);
-  sunB.visible=w[0]>0.35;
+  sunB.visible=w[0]>0.35&&!imOrbit;
+  sunA.visible=!imOrbit;
   sun.position.copy(player.pos).addScaledVector(SUNDIR,120);
   sun.target.position.copy(player.pos); sun.target.updateMatrixWorld();
 
@@ -3515,8 +3704,10 @@ function updateAtmosphere(dt){
   const tt=performance.now()*0.001;
   const gust=0.55+0.45*Math.sin(tt*0.27)+0.25*Math.sin(tt*0.83+1.7);
   const snow=w[1], ember=w[3];
-  scene.fog.density=lerp(scene.fog.density,
-    0.0013*(w[0]+w[2])+ (0.0034+0.0032*clamp(gust,0,1.2))*snow + 0.0022*ember, 1-Math.pow(0.02,dt));
+  const zielDichte = imOrbit ? 0.00002
+    : (planet===1 ? 0.0020 : planet===2 ? 0.0016 : planet===3 ? 0.0018
+      : 0.0013*(w[0]+w[2]) + (0.0034+0.0032*clamp(gust,0,1.2))*snow + 0.0022*ember);
+  scene.fog.density=lerp(scene.fog.density, zielDichte, 1-Math.pow(0.02,dt));
 
   const st=document.getElementById('storm');
   if(st) st.style.opacity=(snow>0.18? snow*(0.08+0.15*clamp(gust,0,1.3)) : 0).toFixed(3);
@@ -3546,7 +3737,7 @@ function updateAtmosphere(dt){
     }
     pGeo.attributes.position.needsUpdate=true;
   }
-  $('#biome').textContent=BIOME_NAMES[biomeAt(player.pos.x,player.pos.z)];
+  $('#biome').textContent=imOrbit?'WELTRAUM':(planet>0?PLANETS[planet].kurz:BIOME_NAMES[biomeAt(player.pos.x,player.pos.z)]);
 }
 
 // ---------- Karte / Kompass / Reise ------------------------------------
@@ -3556,10 +3747,16 @@ function buildWorldImage(){
   const g=c.getContext('2d'), img=g.createImageData(N,N);
   for(let iy=0;iy<N;iy++)for(let ix=0;ix<N;ix++){
     const x=-WR+ix/N*WR*2, z=-WR+iy/N*WR*2;
-    const b=biomeAt(x,z), h=baseH(x,z);
+    const h=baseH(x,z);
     let col;
-    if(b===3&&lavaNoise(x,z)<0.315) col=[255,95,20];
-    else col=b===0?[214,183,130]:b===1?[222,236,248]:b===2?[70,124,55]:[48,38,42];
+    if(planet===1) col = (h>=20)?[190,225,240]:[45,110,145];
+    else if(planet===2) col = (h>46)?[112,60,32]:[178,92,50];
+    else if(planet===3) col = ((Math.floor(x/64)+Math.floor(z/64))%2)?[125,134,151]:[146,155,174];
+    else {
+      const b=biomeAt(x,z);
+      if(b===3&&lavaNoise(x,z)<0.315) col=[255,95,20];
+      else col=b===0?[214,183,130]:b===1?[222,236,248]:b===2?[70,124,55]:[48,38,42];
+    }
     const sh=0.68+clamp(h/70,0,1)*0.55, o=(iy*N+ix)*4;
     img.data[o]=clamp(col[0]*sh,0,255); img.data[o+1]=clamp(col[1]*sh,0,255);
     img.data[o+2]=clamp(col[2]*sh,0,255); img.data[o+3]=255;
@@ -3693,8 +3890,130 @@ function updateQuestBeam(dt){
   const r=questBeam.userData.ring;
   r.scale.setScalar(1+Math.sin(performance.now()*0.003)*0.12);
 }
+// ======================================================================
+//  Weltraum
+// ======================================================================
+let raumGrp=null, planetKugeln=[];
+function baueRaum(){
+  if(raumGrp) return;
+  raumGrp=new THREE.Group(); raumGrp.visible=false; scene.add(raumGrp);
+  // Sternenfeld
+  const pos=[],col=[];
+  for(let i=0;i<2600;i++){
+    const a=rnd()*Math.PI*2, b=Math.acos(2*rnd()-1), r=2400+rnd()*600;
+    pos.push(Math.sin(b)*Math.cos(a)*r, Math.cos(b)*r*0.7+700, Math.sin(b)*Math.sin(a)*r);
+    const v=0.6+rnd()*0.4; col.push(v,v,v*(0.9+rnd()*0.1));
+  }
+  const gm=new THREE.BufferGeometry();
+  gm.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  gm.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  const sterne=new THREE.Points(gm,new THREE.PointsMaterial({size:7,vertexColors:true,fog:false,sizeAttenuation:true}));
+  raumGrp.add(sterne); raumGrp.userData.sterne=sterne;
+  // Planeten als grosse Kugeln
+  planetKugeln=[];
+  for(let i=0;i<PLANETS.length;i++){
+    const P=PLANETS[i], g=new THREE.Group();
+    const kug=new THREE.Mesh(new THREE.IcosahedronGeometry(120,2),
+      new THREE.MeshLambertMaterial({color:P.farbe,flatShading:true,fog:false}));
+    g.add(kug);
+    const hof=new THREE.Mesh(new THREE.IcosahedronGeometry(134,2),
+      new THREE.MeshBasicMaterial({color:P.ring,transparent:true,opacity:0.16,fog:false,side:THREE.BackSide}));
+    g.add(hof);
+    for(let k=0;k<14;k++){                       // Wolken- und Landflecken
+      const f=new THREE.Mesh(new THREE.IcosahedronGeometry(rr(18,44),1),
+        new THREE.MeshLambertMaterial({color:shade(P.farbe,rnd()>0.5?0.10:-0.12),flatShading:true,fog:false}));
+      const a=rnd()*Math.PI*2, b=Math.acos(2*rnd()-1);
+      f.position.set(Math.sin(b)*Math.cos(a)*112, Math.cos(b)*112, Math.sin(b)*Math.sin(a)*112);
+      g.add(f);
+    }
+    g.position.set(P.bahn[0],P.bahn[1],P.bahn[2]);
+    g.userData.index=i; raumGrp.add(g); planetKugeln.push(g);
+  }
+  // Treibende Felsbrocken
+  for(let i=0;i<70;i++){
+    const a=new THREE.Mesh(new THREE.IcosahedronGeometry(rr(3,14),0),
+      new THREE.MeshLambertMaterial({color:shade(0x6d6560,(rnd()-0.5)*0.2),flatShading:true,fog:false}));
+    a.position.set(rr(-1800,1800), rr(600,1500), rr(-1800,1800));
+    a.userData.dreh=new THREE.Vector3(rr(-0.4,0.4),rr(-0.4,0.4),rr(-0.4,0.4));
+    raumGrp.add(a);
+  }
+}
+function naechsterPlanet(){
+  let best=-1,bd=1e9;
+  for(let i=0;i<planetKugeln.length;i++){
+    const d=planetKugeln[i].position.distanceTo(player.pos);
+    if(d<bd){bd=d;best=i;}
+  }
+  return {i:best,d:bd};
+}
+// Alles, was zur Heimatwelt gehört, aus- und einblenden
+function weltSichtbar(an){
+  for(const n of npcs) n.visible=an;
+  for(const c of critters) c.visible=an;
+  for(const pk of pickups) pk.visible=an;
+  for(const e of enemies) e.visible=an;
+  for(const sh of ships) sh.visible=an||player.inShip===sh;
+  if(speeder) speeder.visible=an;
+  for(const v of vehicles) v.o.visible=an;
+  for(const c of chunks.values()) c.grp.visible=!imOrbit;
+}
+function betreteOrbit(){
+  if(imOrbit) return;
+  baueRaum(); imOrbit=true; raumGrp.visible=true;
+  weltSichtbar(false);
+  toast('Du hast die Atmosphäre verlassen — Kurs auf einen Planeten setzen');
+}
+function verlasseOrbit(){
+  if(!imOrbit) return;
+  imOrbit=false; if(raumGrp) raumGrp.visible=false;
+  weltSichtbar(planet===0);
+  for(const c of chunks.values()) c.grp.visible=true;
+}
+// Welt wechseln: alles Alte wegräumen und neu aufbauen
+function reiseZu(neu){
+  planet=neu;
+  for(const c of Array.from(chunks.values())) disposeChunk(c);
+  chunks.clear(); buckets.clear(); propsDone.clear(); dug.clear(); dugCount=0;
+  for(const L of LAND) L.built=false;      // Anlagen der Heimatwelt neu setzen
+  raumHafen.clear();                       // Landeplatz der Zielwelt neu setzen
+  const sh=player.inShip;
+  const y0=terrainH(0,0)+70;
+  if(sh){ sh.position.set(0,y0,0); sh.userData.speed=0; }
+  player.pos.set(0,y0,0); player.vel.set(0,0,0);
+  verlasseOrbit();
+  weltSichtbar(planet===0);                 // Heimat-Fahrzeuge und Leute nur auf der Heimatwelt
+  updateStreaming(true);
+  if(!sh){ player.pos.y=topAt(0,0)+1; }
+  player.checkpoint.copy(player.pos);
+  camera.position.copy(player.pos).add(new THREE.Vector3(20,12,20));
+  buildWorldImage();                        // Karte der neuen Welt zeichnen
+  const P=PLANETS[planet];
+  toast('Gelandet auf '+P.name+' — '+P.info);
+  saveProfile();
+}
+function updateRaum(dt){
+  if(!imOrbit||!raumGrp) return;
+  raumGrp.userData.sterne.position.copy(player.pos);
+  for(const o of raumGrp.children){
+    if(o.userData.dreh){ o.rotation.x+=o.userData.dreh.x*dt; o.rotation.y+=o.userData.dreh.y*dt; }
+  }
+  for(const g of planetKugeln) g.rotation.y+=dt*0.05;
+  // Wieder eintauchen: unter die Orbitgrenze über der eigenen Welt
+  if(player.pos.y<ORBIT_H-30) verlasseOrbit();
+}
 function updateHint(){
   const h=$('#hint');
+  if(imOrbit){
+    const n=naechsterPlanet();
+    if(n.i>=0){
+      const P=PLANETS[n.i];
+      h.textContent=(n.d<320)
+        ? '[F] auf '+P.name+' landen — '+P.info
+        : P.name+' · '+Math.round(n.d)+' m — flieg näher heran, dann [F]';
+      h.style.display='block';
+    }
+    return;
+  }
   if(dialogOpen){ h.style.display='none'; return; }
   if(stuckT>2.5&&!player.inShip&&!player.inSpeeder){
     h.innerHTML='Festgesteckt? <b>[U]</b> befreit dich';
@@ -3856,12 +4175,13 @@ function loop(now){
   }
   $('#dbg').textContent=fps+' FPS · Chunks '+chunks.size+' · Queue '+buildQueue.length;
 
+  updateRaum(dt);
   updateQuestBeam(dt);
   // alle paar Sekunden pruefen, ob noch genug Sammelstuecke in der Welt liegen
   window._restockT=(window._restockT||0)-dt;
   if(window._restockT<=0){
     window._restockT=5;
-    for(const q of quests)
+    if(planet===0&&!imOrbit) for(const q of quests)
       if(q.type==='collect'&&qState[q.id]==='active'&&q.have<q.need) restockQuestItems(q);
   }
   // Auf der Markierung stehen bleiben schliesst die Mission ab
