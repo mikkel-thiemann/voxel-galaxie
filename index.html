@@ -230,7 +230,7 @@
     <span>1 2 3</span><span>Sichtweite</span>
   </div>
   <div class="go">NAME EINGEBEN UND [ENTER]</div>
-  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 35 · Konten v2</div>
+  <div style="position:absolute;right:14px;bottom:12px;font-size:11px;opacity:.35;letter-spacing:1px">Build 36 · Konten v2</div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1684,7 +1684,7 @@ function addCollider(obj,dims){
   colliders.push(c); return c;
 }
 function colliderHit(x,y,z){
-  if(planet>0||imOrbit) return false;
+  if(imOrbit) return false;
   for(let i=0;i<colliders.length;i++){
     const c=colliders[i], o=c.obj;
     if(player.inShip===o||(player.inSpeeder&&o===speeder)) continue;      // eigenes Fahrzeug ignorieren
@@ -1698,7 +1698,7 @@ function colliderHit(x,y,z){
 }
 function colliderTop(x,z,y){                    // höchste Trittfläche unter den Füssen
   let best=-1e9;
-  if(planet>0||imOrbit) return best;
+  if(imOrbit) return best;
   for(let i=0;i<colliders.length;i++){
     const c=colliders[i], o=c.obj;
     if(player.inShip===o||(player.inSpeeder&&o===speeder)) continue;
@@ -2637,7 +2637,7 @@ let spawnT=0;
 // Abgestellte Fahrzeuge finden von selbst zu ihrem Platz zurück,
 // damit ein gekauftes Fahrzeug immer dort steht, wo es hingehört.
 function updateParking(){
-  if(planet>0||imOrbit) return;            // fremde Welt: das Schiff bleibt, wo es steht
+  if(imOrbit) return;
   for(const sh of ships){
     if(player.inShip===sh) continue;
     const h=sh.userData.homePos; if(!h) continue;
@@ -4220,10 +4220,52 @@ function weltSichtbar(an){
   for(const c of critters) c.visible=an;
   for(const pk of pickups) pk.visible=an;
   for(const e of enemies) e.visible=an;
-  for(const sh of ships) sh.visible=an||player.inShip===sh;
-  if(speeder) speeder.visible=an;
   for(const v of vehicles) v.o.visible=an;
   for(const c of chunks.values()) c.grp.visible=!imOrbit;
+  fahrzeugeSichtbar();
+}
+// Gekaufte Fahrzeuge sind ueberall sichtbar, gesperrte nur zu Hause
+function fahrzeugeSichtbar(){
+  for(const sh of ships){
+    const k=sh.userData.kind||'ship';
+    sh.visible=!imOrbit && (planet===0 || !!owned[k] || player.inShip===sh);
+  }
+  if(speeder) speeder.visible=!imOrbit && (planet===0 || !!owned['speeder']);
+}
+// Beim Weltwechsel kommt der ganze Fuhrpark mit und parkt am Raumhafen
+function fahrzeugeMitnehmen(){
+  let i=0;
+  const platz=(abstand)=>{
+    const an=(i++)*1.05, d=abstand;
+    const x=Math.round(Math.cos(an)*d), z=Math.round(Math.sin(an)*d);
+    return {x:x, z:z};
+  };
+  for(const sh of ships){
+    const k=sh.userData.kind||'ship';
+    if(!sh.userData.heimatPos) sh.userData.heimatPos=sh.userData.homePos.clone();
+    if(planet===0){                                   // zu Hause zurueck auf den alten Platz
+      sh.userData.homePos.copy(sh.userData.heimatPos);
+    } else if(player.inShip!==sh){                    // fremde Welt: rund um den Landeplatz
+      const gross=(k==='destroyer'||k==='falcon');
+      const pkt=platz(gross?62:34);
+      const y=terrainH(pkt.x,pkt.z)+(sh.userData.clear||2.5);
+      sh.userData.homePos.set(pkt.x,y,pkt.z);
+    }
+    if(player.inShip!==sh){
+      sh.position.copy(sh.userData.homePos);
+      sh.quaternion.identity(); sh.userData.speed=0;
+    }
+  }
+  if(speeder){
+    if(!speeder.userData.heimatPos) speeder.userData.heimatPos=speeder.userData.homePos.clone();
+    if(planet===0) speeder.userData.homePos.copy(speeder.userData.heimatPos);
+    else{
+      const pkt=platz(30);
+      speeder.userData.homePos.set(pkt.x,terrainH(pkt.x,pkt.z)+2,pkt.z);
+    }
+    speeder.position.copy(speeder.userData.homePos); speeder.rotation.set(0,0,0);
+  }
+  fahrzeugeSichtbar();
 }
 function betreteOrbit(){
   if(imOrbit) return;
@@ -4251,6 +4293,7 @@ function reiseZu(neu){
   verlasseOrbit();
   weltSichtbar(planet===0);                 // Heimat-Fahrzeuge und Leute nur auf der Heimatwelt
   updateStreaming(true);
+  fahrzeugeMitnehmen();                     // Fuhrpark kommt mit und parkt am Raumhafen
   if(!sh){ player.pos.y=topAt(0,0)+1; }
   player.checkpoint.copy(player.pos);
   camera.position.copy(player.pos).add(new THREE.Vector3(20,12,20));
